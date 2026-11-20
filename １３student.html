@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16202B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="勉強スケジュール">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<title>勉強スケジュール 生徒用</title>
+<style>html{-webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<style>
+/* Layout: one column. Header with progress ring, day tabs, a "now" card, a time-scaled timeline (height = minutes), week summary, then two small panels: send the week to the teacher (copyable text) and paste a new schedule from the teacher. No account, nothing leaves the device unless the student copies it. */
+:root {
+  --bg: #F3F5F8;
+  --surface: #FFFFFF;
+  --surface2: #E6EBF1;
+  --fg: #16202B;
+  --muted: #566371;
+  --line: #D6DDE5;
+  --accent: #16202B;
+  --on-accent: #FFFFFF;
+  --now: #A44A07;
+  --now-bg: #FFF1DC;
+  --danger: #B42318;
+  --math: #1D4ED8; --math-bg: #DBEAFE; --math-ink: #1E3A8A;
+  --sci: #15803D;  --sci-bg: #DCFCE7;  --sci-ink: #14532D;
+  --jpn: #B91C1C;  --jpn-bg: #FEE2E2;  --jpn-ink: #7F1D1D;
+  --calc: #7E22CE; --calc-bg: #F3E8FF; --calc-ink: #581C87;
+  --soc: #0F766E;  --soc-bg: #CCFBF1;  --soc-ink: #134E4A;
+  --eng: #A16207;  --eng-bg: #FEF3C7;  --eng-ink: #713F12;
+  --mth: #BE185D;  --mth-bg: #FCE7F3;  --mth-ink: #831843;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Noto Sans JP", sans-serif;
+  --font-body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1318; --surface: #161D25; --surface2: #222C37; --fg: #E7ECF1; --muted: #9BA8B5; --line: #2B3642;
+    --accent: #E7ECF1; --on-accent: #0E1318; --now: #F5B14C; --now-bg: #2B2012; --danger: #FF8A80;
+    --math: #3461D6; --math-bg: #1A2745; --math-ink: #BFD2FF;
+    --sci: #1B7F43;  --sci-bg: #143222;  --sci-ink: #B4EBC8;
+    --jpn: #C73535;  --jpn-bg: #3A1A1C;  --jpn-ink: #FFC2C2;
+    --calc: #8B3FD9; --calc-bg: #2D1B45; --calc-ink: #E2C8FF;
+    --soc: #12857B;  --soc-bg: #0F2E2B;  --soc-ink: #A7F0E6;
+    --eng: #A8650B;  --eng-bg: #33260A;  --eng-ink: #FDE68A;
+    --mth: #C03A7B;  --mth-bg: #3A1A2B;  --mth-ink: #FBCFE8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1318; --surface: #161D25; --surface2: #222C37; --fg: #E7ECF1; --muted: #9BA8B5; --line: #2B3642;
+  --accent: #E7ECF1; --on-accent: #0E1318; --now: #F5B14C; --now-bg: #2B2012; --danger: #FF8A80;
+  --math: #3461D6; --math-bg: #1A2745; --math-ink: #BFD2FF;
+  --sci: #1B7F43;  --sci-bg: #143222;  --sci-ink: #B4EBC8;
+  --jpn: #C73535;  --jpn-bg: #3A1A1C;  --jpn-ink: #FFC2C2;
+  --calc: #8B3FD9; --calc-bg: #2D1B45; --calc-ink: #E2C8FF;
+  --soc: #12857B;  --soc-bg: #0F2E2B;  --soc-ink: #A7F0E6;
+  --eng: #A8650B;  --eng-bg: #33260A;  --eng-ink: #FDE68A;
+  --mth: #C03A7B;  --mth-bg: #3A1A2B;  --mth-ink: #FBCFE8;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  font-variant-numeric: tabular-nums;
+}
+.app.wide { max-width: 1180px; }
+.app { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+.s-math { --c: var(--math); --cbg: var(--math-bg); --ci: var(--math-ink); }
+.s-sci  { --c: var(--sci);  --cbg: var(--sci-bg);  --ci: var(--sci-ink); }
+.s-jpn  { --c: var(--jpn);  --cbg: var(--jpn-bg);  --ci: var(--jpn-ink); }
+.s-calc { --c: var(--calc); --cbg: var(--calc-bg); --ci: var(--calc-ink); }
+.s-soc  { --c: var(--soc);  --cbg: var(--soc-bg);  --ci: var(--soc-ink); }
+.s-eng  { --c: var(--eng);  --cbg: var(--eng-bg);  --ci: var(--eng-ink); }
+.s-mth  { --c: var(--mth);  --cbg: var(--mth-bg);  --ci: var(--mth-ink); }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.head > div { min-width: 0; }
+.eyebrow { margin: 0; font-size: 14px; color: var(--muted); letter-spacing: .06em; }
+h1 { margin: 0; font-family: var(--font-display); font-size: 30px; line-height: 1.25; text-wrap: balance; }
+.ring { position: relative; width: 68px; height: 68px; flex: none; }
+.ring svg { display: block; transform: rotate(-90deg); }
+.ring .trk { stroke: var(--surface2); }
+.ring .val { stroke: var(--accent); transition: stroke-dasharray .4s ease; }
+.ring .cnt { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-weight: 700; font-size: 15px; line-height: 1.1; }
+.ring .cnt small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
+
+.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.day { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 8px 2px 7px; min-height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.day .dw { font-size: 13px; font-weight: 700; }
+.day .dn { font-size: 12px; color: var(--muted); }
+.day .df { font-size: 11px; font-weight: 700; color: var(--muted); }
+.day[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.day[aria-pressed="true"] .dn, .day[aria-pressed="true"] .df { color: var(--on-accent); opacity: .8; }
+.day.full .df { text-decoration: underline; text-underline-offset: 2px; }
+.day .tdy { font-size: 10px; font-weight: 700; color: var(--now); line-height: 1.2; }
+.day[aria-pressed="true"] .tdy { color: var(--on-accent); }
+
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.hero-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: var(--now-bg); color: var(--now); border: 1px solid var(--now); }
+.badge.plain { background: var(--surface2); color: var(--muted); border-color: var(--line); }
+.chip { font-size: 13px; font-weight: 700; padding: 2px 12px; border-radius: 999px; background: var(--c); color: #fff; }
+.hero h2 { margin: 0; font-family: var(--font-display); font-size: 26px; line-height: 1.3; text-wrap: balance; overflow-wrap: anywhere; }
+.hero .range { margin: 0; color: var(--muted); font-size: 14px; }
+.remain { display: flex; align-items: baseline; gap: 6px; font-size: 15px; }
+.remain strong { font-family: var(--font-display); font-size: 40px; line-height: 1; }
+.bar { height: 10px; border-radius: 999px; background: var(--surface2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--c, var(--accent)); border-radius: 999px; transition: width .4s ease; }
+.hero .note { margin: 0; font-size: 14px; color: var(--muted); }
+.hero.plain h2 { font-size: 22px; }
+
+.komas { display: flex; flex-direction: column; gap: 22px; }
+.koma h3 { margin: 0 0 8px; display: flex; align-items: baseline; gap: 10px; font-family: var(--font-display); font-size: 17px; }
+.koma h3 span { font-family: var(--font-body); font-size: 13px; font-weight: 400; color: var(--muted); }
+.tl { position: relative; display: grid; grid-template-rows: repeat(var(--rows, 6), var(--slot)); }
+.slot { display: flex; align-items: flex-start; width: 100%; margin: 0; padding: 0; border: 0; border-top: 1px dashed var(--line); background: transparent; color: var(--muted); font-size: 12px; text-align: left; }
+.slot .lab { width: 52px; flex: none; padding-top: 2px; }
+.slot.hr { border-top-style: solid; }
+.slot.hr .lab { font-weight: 700; color: var(--fg); }
+.slot.q { border-top-style: dotted; }
+.tl::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; border-top: 1px dashed var(--line); pointer-events: none; }
+.blocks { position: absolute; left: 52px; right: 0; top: 0; bottom: 0; pointer-events: none; }
+.task { position: absolute; left: 0; right: 0; pointer-events: auto; display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 6px; margin: 0; padding: 2px 4px 2px 12px; border-radius: 10px; background: var(--cbg); color: var(--ci); overflow: hidden; }
+.task.tall { align-items: start; padding-top: 8px; }
+.task .tx { min-width: 0; display: flex; flex-direction: column; }
+.task .l1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
+.task .subj { font-weight: 700; font-size: 15px; flex: none; }
+.task .lb { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.task .mins { font-size: 12px; opacity: .85; flex: none; }
+.task .l2 { font-size: 12px; opacity: .85; }
+.task .tag { flex: none; font-size: 11px; font-weight: 700; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; }
+.task.lesson { background: var(--c); color: #fff; }
+.task.now { outline: 3px solid var(--now); outline-offset: 1px; z-index: 2; }
+.task.done .tx { opacity: .55; }
+.task.done .subj, .task.done .lb { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.chk { width: 44px; height: 44px; border-radius: 50%; border: 2px solid currentColor; background: transparent; display: grid; place-items: center; padding: 0; }
+.chk svg { width: 22px; height: 22px; opacity: 0; }
+.chk[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chk[aria-pressed="true"] svg { opacity: 1; }
+.task.lesson .chk { color: #fff; }
+.task.lesson .chk[aria-pressed="true"] { background: #fff; border-color: #fff; color: var(--c); }
+.nowline { position: absolute; left: 44px; right: 0; border-top: 2px solid var(--now); z-index: 3; pointer-events: none; }
+.nowline::before { content: ""; position: absolute; left: -2px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--now); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { margin: 0; font-family: var(--font-display); font-size: 18px; }
+.subs { display: flex; flex-direction: column; gap: 12px; }
+.sub { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: 14px; }
+.sub b { font-weight: 700; }
+.sub .bar { height: 12px; }
+.sub span { color: var(--muted); font-size: 13px; text-align: right; min-width: 110px; }
+.hint { margin: 0; font-size: 13px; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: var(--muted); }
+textarea, input[type="text"] { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px; min-height: 44px; }
+textarea { resize: vertical; min-height: 96px; }
+textarea.code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; word-break: break-all; min-height: 160px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cbtn { min-height: 44px; padding: 4px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.cbtn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { min-height: 44px; padding: 6px 20px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font-weight: 700; }
+.btn.pri { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.msg { margin: 0; font-size: 14px; }
+.msg.err { color: var(--danger); font-weight: 700; }
+.msg.ok { color: var(--muted); }
+
+
+.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tab { min-height: 44px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; font-weight: 700; font-size: 14px; padding: 4px 2px; }
+.tab[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+select { width: 100%; min-height: 44px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn.sm { min-height: 40px; padding: 4px 14px; font-size: 14px; }
+.pv { margin: 0; font-weight: 700; }
+
+.wkwrap { overflow-x: auto; }
+table.wk { width: 100%; border-collapse: collapse; }
+table.wk th, table.wk td { border: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+table.wk thead th { background: var(--surface2); font-size: 13px; }
+table.wk th[scope="row"] { width: 70px; text-align: center; background: var(--surface); }
+table.wk th[scope="row"] b { display: block; font-size: 17px; font-family: var(--font-display); }
+table.wk th[scope="row"] span, table.wk th[scope="row"] small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+table.wk tr.today th[scope="row"], table.wk tr.today td { background: var(--now-bg); }
+table.wk ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.it { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 4px 8px; border-left: 5px solid var(--c); border-radius: 6px; background: var(--cbg); color: var(--ci); font-size: 14px; }
+.it .bx { font-size: 16px; line-height: 1; }
+.it .tm { font-size: 13px; }
+.it .mn { font-size: 12px; opacity: .85; }
+.it.lesson { background: var(--c); color: #fff; }
+.none { color: var(--muted); font-size: 13px; }
+.tot { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.tot b { color: var(--fg); }
+.print-only { display: none; }
+
+.gtop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px 20px; }
+.gtop h1 { font-size: 24px; }
+.gtop p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.gfields { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; }
+input.nmin[type="text"] { width: 160px; min-height: 0; border: 0; border-bottom: 1px solid var(--muted); border-radius: 0; background: transparent; padding: 0 6px; text-align: center; font-size: 14px; }
+.gfields .ul.nmprint { display: none; }
+@media print { input.nmin[type="text"] { display: none; } .gfields .ul.nmprint { display: inline-block; } }
+.gfields .ul { display: inline-block; min-width: 140px; border-bottom: 1px solid var(--muted); padding: 0 6px; text-align: center; }
+.gwrap { overflow-x: auto; padding-bottom: 4px; }
+.ggrid { --rh: 44px; display: grid; min-width: 960px; gap: 3px; grid-template-columns: 84px 48px repeat(7, minmax(0, 1fr));
+  grid-template-rows: 44px repeat(6, minmax(var(--rh), auto)) 10px repeat(6, minmax(var(--rh), auto)) 10px repeat(6, minmax(var(--rh), auto)); }
+.gh { background: var(--accent); color: var(--on-accent); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; line-height: 1.2; }
+.gh small { font-size: 11px; font-weight: 400; opacity: .85; }
+.gh.today { outline: 3px solid var(--now); outline-offset: 1px; }
+.gcorner { grid-column: 1 / span 2; grid-row: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); }
+.gk { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.gk b { font-size: 16px; }
+.gk span { font-size: 12px; line-height: 1.4; text-align: center; color: var(--muted); }
+.gt { display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 11px; color: var(--muted); }
+.gc { box-sizing: border-box; min-width: 0; padding: 3px 8px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: var(--cbg); color: var(--ci); display: flex; flex-direction: column; justify-content: center; gap: 1px; overflow: hidden; }
+.gc.lesson { background: var(--c); border-color: var(--c); color: #fff; }
+.gc .g1 { font-size: 13px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.gc.big .g1 { font-size: 16px; }
+.gc.one { flex-direction: row; align-items: center; gap: 6px; }
+.gc.one .g1 { flex: 1; min-width: 0; font-size: 12px; }
+.gc.one .g2 { flex: none; white-space: nowrap; }
+.gc .g2 { font-size: 11px; line-height: 1.3; opacity: .9; }
+.gc .bx { font-style: normal; margin-right: 3px; font-weight: 400; }
+.gc.wk { position: relative; padding: 0; display: block; }
+.gedit { display: flex; flex-direction: column; justify-content: center; gap: 1px; box-sizing: border-box; width: 100%; height: 100%; margin: 0; font: inherit; color: inherit; background: none; border: 0; text-align: left; padding: 3px 28px 3px 8px; cursor: pointer; }
+.gc.one .gedit { flex-direction: row; align-items: center; gap: 6px; }
+.gdel { position: absolute; top: 3px; right: 3px; margin: 0; width: 22px; height: 22px; padding: 0; display: flex; align-items: center; justify-content: center; font: inherit; font-size: 14px; font-weight: 700; line-height: 1; border-radius: 50%; border: 1px solid var(--danger); background: var(--surface); color: var(--danger); cursor: pointer; }
+.gdel.arm { width: auto; min-width: 22px; padding: 0 7px; border-radius: 11px; font-size: 11px; background: var(--danger); color: var(--surface); white-space: nowrap; }
+.dl24 { display: flex; flex-direction: column; gap: 8px; }
+.tk { box-sizing: border-box; width: 100%; margin: 0; font: inherit; text-align: left; border: 0; display: grid; grid-template-columns: 64px minmax(0, 1fr) 44px; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; min-height: 56px; border-radius: 12px; background: var(--cbg); color: var(--ci); }
+.tk .tm { font-size: 13px; line-height: 1.3; opacity: .9; }
+.tk .tx { min-width: 0; display: flex; flex-direction: column; }
+.tk .l1 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; min-width: 0; }
+.tk .subj { font-weight: 700; font-size: 15px; }
+.tk .lb { font-size: 14px; overflow-wrap: anywhere; }
+.tk .mins { font-size: 12px; opacity: .85; }
+.tk .l2 { font-size: 12px; opacity: .85; }
+.tk .tag { flex: none; font-size: 11px; font-weight: 700; padding: 0 8px; border-radius: 999px; border: 1px solid currentColor; }
+.tk.lesson { background: var(--c); color: #fff; }
+.tk.now { outline: 3px solid var(--now); outline-offset: 1px; }
+.tk.sel { outline: 3px solid var(--fg); outline-offset: 1px; }
+.tk.done .tx { opacity: .55; }
+.tk.done .subj, .tk.done .lb { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.tk.lesson .chk { color: #fff; }
+.tk.lesson .chk[aria-pressed="true"] { background: #fff; border-color: #fff; color: var(--c); }
+button.tk { grid-template-columns: 64px minmax(0, 1fr); cursor: pointer; }
+.w24 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; min-width: 840px; align-items: start; }
+.wcol { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wcol .gh { min-height: 44px; }
+.wcol .gc { flex: none; min-height: 44px; }
+.fm { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 4px 2px; font-size: 12px; color: var(--muted); }
+.fm.k { margin-top: 6px; border-top: 2px solid var(--fg); color: var(--fg); font-weight: 700; font-size: 14px; }
+.fm.b { align-items: center; margin: 0; padding: 4px 12px; border-radius: 8px; background: var(--surface2); font-size: 12px; }
+.kg { display: flex; flex-direction: column; gap: 8px; }
+.fe { padding: 4px 12px; font-size: 13px; color: var(--muted); }
+.wcol .fm { flex-direction: column; align-items: flex-start; gap: 0; font-size: 11px; }
+.wcol .fm.k { font-size: 12px; }
+.wcol .fm.b { margin-left: 4px; }
+.tl24 .slot { font-size: 11px; }
+.fband { position: absolute; left: 52px; right: 0; background: color-mix(in srgb, var(--accent) 8%, transparent); border-left: 3px solid var(--muted); pointer-events: none; }
+.fband span { position: absolute; right: 6px; top: 2px; font-size: 11px; font-weight: 700; color: var(--muted); }
+.fband.br { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--muted) 35%, transparent) 0 3px, transparent 3px 6px); border-left-color: transparent; }
+.fband.br span { display: none; }
+.jt { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.jt span { font-size: 12px; color: var(--muted); }
+.jt .cbtn { min-height: 36px; padding: 2px 14px; font-size: 13px; }
+button.slot { cursor: pointer; }
+button.slot:hover { background: var(--surface2); }
+button.slot:hover::after { content: "＋ ここに追加"; padding: 2px 0 0 8px; color: var(--fg); }
+.task.edit { grid-template-columns: minmax(0, 1fr); border: 0; text-align: left; font: inherit; cursor: pointer; }
+.task.sel { outline: 3px solid var(--fg); outline-offset: 1px; z-index: 2; }
+.cbtn { font-weight: 500; }
+.cbtn:disabled { opacity: .4; cursor: not-allowed; }
+.cbtn.s { border-color: var(--c); color: var(--ci); background: var(--cbg); }
+.cbtn.s[aria-pressed="true"] { background: var(--c); color: #fff; border-color: var(--c); }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+fieldset legend, .field label { font-size: 13px; color: var(--muted); font-weight: 500; padding: 0; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+.btn.dng { color: var(--danger); border-color: var(--danger); }
+.btn.dng.arm { background: var(--danger); color: var(--surface); }
+@media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+button.gc { font: inherit; text-align: left; width: auto; margin: 0; cursor: pointer; }
+.gadd { box-sizing: border-box; min-width: 0; border: 1px dashed var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 16px; padding: 0; }
+.gadd:hover, .gadd:focus-visible { background: var(--surface2); }
+.gadd.wide { min-height: 44px; font-size: 13px; }
+.repbox { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.gsun { grid-column: 9; grid-row: 2 / -1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gsun .gc { flex: none; }
+.gsun .g2 { font-size: 11px; }
+.g24 { min-width: 900px; gap: 0 3px; grid-template-columns: 70px 44px repeat(7, minmax(0, 1fr)); }
+.g24 .gt24 { display: flex; align-items: flex-start; justify-content: flex-end; padding: 0 6px 0 0; font-size: 11px; line-height: 1; color: var(--muted); border-top: 1px solid var(--line); }
+.g24 .fbg { background: color-mix(in srgb, var(--accent) 6%, transparent); border-radius: 4px; pointer-events: none; }
+.g24 .gk { border-radius: 6px; }
+.g24 .gc { padding: 1px 6px; border-radius: 5px; margin: 0 0 1px; }
+.g24 .gc .g1 { font-size: 12px; line-height: 1.2; }
+.g24 .gc.big .g1 { font-size: 13px; }
+.g24 .gc .g2 { font-size: 10px; line-height: 1.2; }
+.g24 .gedit { padding: 1px 22px 1px 6px; }
+.g24 .gdel { top: 1px; right: 1px; width: 18px; height: 18px; font-size: 12px; }
+.g24 .gdel.arm { width: auto; }
+.g24 .gadd { border-radius: 4px; font-size: 11px; line-height: 1; border-style: dotted; }
+
+.loglist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lg { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 14px; border-left: 5px solid var(--c); background: var(--cbg); color: var(--ci); border-radius: 6px; padding: 4px 8px; }
+.lg time { font-size: 12px; }
+.lg.no { background: var(--surface2); color: var(--muted); border-left-color: var(--line); }
+.sumline { margin: 0; font-size: 15px; font-weight: 700; }
+
+.el { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.er { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 6px 8px 6px 10px; border-left: 5px solid var(--c); background: var(--cbg); color: var(--ci); border-radius: 6px; font-size: 14px; }
+.er .ex { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.er .ex span { font-size: 12px; opacity: .85; }
+.er .ea { display: flex; gap: 6px; }
+.er .btn { background: var(--surface); color: var(--fg); }
+.er .btn.danger { color: var(--danger); }
+.dayh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 6px; }
+.dayh h3 { margin: 0; font-family: var(--font-display); font-size: 16px; }
+
+@media print {
+  :root:root:root {
+    --bg: #fff; --surface: #fff; --surface2: #eee; --fg: #000; --muted: #444; --line: #888; --accent: #000; --on-accent: #fff; --now: #000; --now-bg: #f2f2f2;
+    --math: #1D4ED8; --math-bg: #DBEAFE; --math-ink: #1E3A8A; --sci: #15803D; --sci-bg: #DCFCE7; --sci-ink: #14532D;
+    --jpn: #B91C1C; --jpn-bg: #FEE2E2; --jpn-ink: #7F1D1D; --calc: #7E22CE; --calc-bg: #F3E8FF; --calc-ink: #581C87;
+    --soc: #0F766E; --soc-bg: #CCFBF1; --soc-ink: #134E4A; --eng: #A16207; --eng-bg: #FEF3C7; --eng-ink: #713F12; --mth: #BE185D; --mth-bg: #FCE7F3; --mth-ink: #831843; color-scheme: light;
+  }
+  @page { size: A4 portrait; margin: 10mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { padding: 0; font-size: 12px; line-height: 1.4; background: #fff; }
+  .app { max-width: none; gap: 8px; }
+  .noprint, .tabs, .actions, .btn, .cbtn, .hint, .msg, .gadd, #edform, .gdel { display: none !important; }
+  .print-only { display: block; }
+  .print-only h1 { font-size: 20px; margin: 0; }
+  .panel { border: 0; padding: 0; gap: 8px; }
+  .ggrid { --rh: 23px; min-width: 0; gap: 2px; grid-template-columns: 62px 36px repeat(7, minmax(0, 1fr)); grid-template-rows: 34px repeat(6, minmax(var(--rh), auto)) 6px repeat(6, minmax(var(--rh), auto)) 6px repeat(6, minmax(var(--rh), auto)); }
+  .gwrap { overflow: visible; }
+  .gh { font-size: 13px; }
+  .gh small { font-size: 9px; }
+  .gk b { font-size: 12px; }
+  .gk span { font-size: 9px; }
+  .gt { font-size: 8px; padding-right: 3px; }
+  .gc { padding: 1px 5px; flex-direction: row; align-items: center; gap: 5px; border-radius: 5px; }
+  .gc .g1 { font-size: 10px; }
+  .gc.big .g1 { font-size: 11px; }
+  .gc .g2 { font-size: 9px; white-space: nowrap; }
+  .gc.one { flex-direction: row; }
+  .w24 { min-width: 0; gap: 3px; }
+  .ggrid.g24 { --u: 4px; min-width: 0; gap: 0 2px; grid-template-columns: 62px 36px repeat(7, minmax(0, 1fr)); }
+  .g24 .gt24 { font-size: 8px; }
+  .g24 .gc { padding: 0 4px; }
+  .g24 .gc .g1 { font-size: 9px; }
+  .g24 .gc .g2 { font-size: 8px; }
+  .wcol .gadd { display: none; }
+  .gc.stack { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+  .gsun { gap: 2px; }
+  .gtop h1 { font-size: 18px; }
+  .gtop p, .gfields { font-size: 10px; }
+  table.wk { font-size: 11px; }
+  table.wk th, table.wk td { padding: 3px 5px; }
+  table.wk tr { break-inside: avoid; }
+  .it { padding: 1px 6px; font-size: 11px; }
+  .it .bx { font-size: 13px; }
+  table.wk ul { gap: 2px; }
+}
+@media (max-width: 420px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .lg { grid-template-columns: 1fr; gap: 0; }
+  table.wk th[scope="row"] { width: 56px; }
+}
+@media (max-width: 420px) {
+  h1 { font-size: 26px; }
+  .sub { grid-template-columns: 40px minmax(0, 1fr); }
+  .sub span { grid-column: 1 / -1; text-align: left; margin-top: -6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring .val, .bar i { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="app" id="app"></main>
+
+<script>
+(function () {
+  'use strict';
+  var BASE = {"v":1794424859338,"t":[[1,"A",0,6,"算数","授業","t01"],[1,"B",0,6,"理科","授業","t02"],[1,"C",0,1,"国語","漢字・語句","t03"],[1,"C",1,1,"計算","練習","t04"],[1,"C",2,2,"算数","授業の直し","t05"],[1,"C",4,2,"理科","授業の直し","t06"],[2,"A",0,4,"算数","宿題","t07"],[2,"A",4,2,"理科","宿題","t08"],[2,"B",0,1,"国語","漢字・語句","t09"],[2,"B",1,4,"国語","宿題","t10"],[2,"B",5,1,"理科","暗記","t11"],[2,"C",0,6,"計算","授業","t12"],[3,"A",0,4,"算数","宿題","t13"],[3,"A",4,2,"計算","授業の直し","t14"],[3,"B",0,1,"国語","漢字・語句","t15"],[3,"B",1,1,"計算","練習","t16"],[3,"B",2,1,"理科","暗記","t17"],[4,"A",0,1,"国語","漢字・語句","t18"],[4,"A",1,1,"計算","練習","t19"],[4,"A",2,1,"理科","暗記","t20"],[5,"A",0,1,"国語","漢字・語句","t21"],[5,"A",1,1,"計算","練習","t22"],[5,"A",2,1,"理科","暗記","t23"],[5,"A",3,3,"算数","宿題","t24"],[5,"B",0,4,"国語","宿題","t25"],[5,"B",4,2,"理科","宿題","t26"],[5,"C",0,3,"算数","直し","t27"],[6,"A",0,6,"国語","授業","t28"],[6,"B",0,3,"国語","授業の直し","t29"],[6,"B",3,2,"算数","宿題","t30"],[6,"B",5,1,"計算","練習","t31"],[6,"C",0,3,"理科","宿題","t32"],[0,"A",0,3,"算数","宿題","t33"],[0,"A",3,3,"国語","宿題","t34"],[0,"B",0,3,"理科","直し","t35"],[6,"C",3,1,"算数","宿題","tmwci8at3b2"]]};
+  var SUBJ = { '算数': 's-math', '理科': 's-sci', '国語': 's-jpn', '計算': 's-calc', '社会': 's-soc', '英語': 's-eng', '数学': 's-mth' };
+  var SUBJ_LIST = ['算数', '数学', '理科', '国語', '英語', '社会', '計算'];
+  // 月・火・木・金・土はA・B・Cコマ(各90分)。水曜日と日曜日だけ 9:00〜22:00 の時間わく F。
+  var KOMA = { A: { name: 'Aコマ', start: 17 * 60, slots: 6 }, B: { name: 'Bコマ', start: 18 * 60 + 35, slots: 6 }, C: { name: 'Cコマ', start: 20 * 60 + 10, slots: 6 }, F: { name: '日曜日', start: 9 * 60, slots: 52 } };
+  var KOMAS = ['A', 'B', 'C'];
+  KOMA.D = { name: '1日(24時間)', start: 0, slots: 96 };
+  KOMA.E = { name: '1日(24時間)', start: 0, slots: 288, unit: 5 };
+  var PATTERNS = { juken: '中学受験', elem: '小学生', mid: '中学生', high: '高校生' };
+  var NSOK = [1, 2, 3, 4, 6, 8, 9, 10, 12, 16, 18, 24, 30, 36, 48];
+  var WD = ['日', '月', '火', '水', '木', '金', '土'];
+  var ORDER = [1, 2, 3, 4, 5, 6, 0];
+  var PPM = 3.4; // 1分あたりの高さ(px)。15分=51px、90分=306px
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hm(m) { return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+  function dur(m) { var h = Math.floor(m / 60), r = m % 60; return (h ? h + '時間' : '') + (r || !h ? r + '分' : ''); }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function mondayOf(d) { return addDays(d, -((d.getDay() + 6) % 7)); }
+  function parseYmd(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function rangeLabel(key) { var a = parseYmd(key), b = addDays(a, 6); return (a.getMonth() + 1) + '/' + a.getDate() + '〜' + (b.getMonth() + 1) + '/' + b.getDate(); }
+  function nowMin() { var n = new Date(); return n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60; }
+  function todayNum() { return new Date().getDay(); }
+  function b64e(str) { var b = new TextEncoder().encode(str), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+  function b64d(t) { var s = atob(t), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return new TextDecoder().decode(a); }
+
+  /* ---- 端末の中への保存(使えないときは、このページを開いている間だけ) ---- */
+  var mem = {};
+  function lsGet(k) { try { var v = localStorage.getItem('ie-study:' + k); if (v != null) return v; } catch (e) {} return mem[k] == null ? null : mem[k]; }
+  function lsSet(k, v) { mem[k] = v; try { localStorage.setItem('ie-study:' + k, v); } catch (e) {} }
+  function lsDel(k) { delete mem[k]; try { localStorage.removeItem('ie-study:' + k); } catch (e) {} }
+  var canStore = (function () { try { localStorage.setItem('ie-study:__t', '1'); localStorage.removeItem('ie-study:__t'); return true; } catch (e) { return false; } })();
+  var PATTERN = (function () { var p = lsGet('pattern'); return PATTERNS[p] ? p : 'juken'; })();
+  function is24() { return PATTERN !== 'juken'; }
+  function isF(d) { return PATTERN === 'juken' && (d === 0 || d === 3); }
+  function kname(k, d) { return k === 'F' ? WD[d] + '曜日' : KOMA[k].name; }
+  function komasOf(day) { return is24() ? ['E'] : (isF(day) ? ['F'] : KOMAS); }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+
+  /* ---- スケジュール ---- */
+  function toTask(a) { return { day: a[0], koma: a[1], s: a[2], n: a[3], subj: a[4], label: a[5], id: a[6] }; }
+  function validSched(o) {
+    if (!o || typeof o.v !== 'number' || !Array.isArray(o.t) || o.t.length > 300) return null;
+    var out = [];
+    for (var i = 0; i < o.t.length; i++) {
+      var a = o.t[i]; if (!Array.isArray(a) || a.length < 7) return null;
+      var t = toTask(a), k = KOMA[t.koma];
+      if (!k || !(t.day >= 0 && t.day <= 6 && t.day % 1 === 0) || !(t.s >= 0 && t.s % 1 === 0) || NSOK.indexOf(t.n) < 0 || t.s + t.n > k.slots || !SUBJ[t.subj] || typeof t.label !== 'string' || t.label.length > 20 || typeof t.id !== 'string' || !/^[A-Za-z0-9_-]{1,40}$/.test(t.id)) return null;
+      out.push(t);
+    }
+    return out;
+  }
+  function norm(t) {
+    var k = KOMA[t.koma]; if (!k) return null;
+    var koma = t.koma, s = t.s, u = k.unit || 15, st = k.start + s * u;
+    if (isF(t.day) && koma !== 'F' && koma !== 'D' && koma !== 'E') { koma = 'F'; s = Math.round((st - KOMA.F.start) / 15); st = KOMA.F.start + s * 15; }
+    return { id: t.id, day: t.day, koma: koma, s: s, n: t.n, subj: t.subj, label: t.label, start: st, mins: t.n * u, end: st + t.n * u, lesson: t.label === '授業' };
+  }
+  function normList(a) { var o = []; a.forEach(function (t) { var x = norm(t); if (x) o.push(x); }); return o; }
+  function tasksOf(list, d) { return list.filter(function (t) { return t.day === d; }).sort(function (a, b) { return a.start - b.start; }); }
+
+  var base = { v: BASE.v, tasks: is24() ? [] : BASE.t.map(toTask) };
+  function setPattern(p) { if (!PATTERNS[p] || p === PATTERN) return false; PATTERN = p; lsSet('pattern', p); base.tasks = is24() ? [] : BASE.t.map(toTask); return true; }
+  function loadSched() {
+    var raw = lsGet('sched');
+    if (raw) { try { var o = JSON.parse(raw), t = validSched(o); if (t && o.v > base.v) return { v: o.v, tasks: t }; } catch (e) {} }
+    return base;
+  }
+  function myBase() {
+    var raw = lsGet('mybase'); if (!raw) return null;
+    try { var o = JSON.parse(raw); if (o && Array.isArray(o.t) && o.t.length) return { at: o.at || 0, tasks: normList(o.t.map(toTask)) }; } catch (e) {}
+    return null;
+  }
+  var sched = loadSched();
+  var tasks = normList(sched.tasks);
+
+  /* ---- 状態 ---- */
+  var S = { key: ymd(mondayOf(new Date())), sel: todayNum(), tab: 'today', hist: null, name: lsGet('name') || lsGet('linkname') || '', msgSched: null, ed: null, edErr: '', delId: null, resetAsk: false, blank: false, wkEdit: false, eday: todayNum(), delArm: false, clearAsk: false, pageMsg: '', edInfo: '', rep: { open: false, days: {}, komas: {} } };
+  S.hist = S.key; S.wk = ''; S.eview = 'day'; S.ekey = S.key; S.emode = isOver(S.key) ? 'week' : 'base'; S.wrAsk = false;
+  var app = document.getElementById('app');
+  function loadDone(key) { try { var o = JSON.parse(lsGet('w:' + key) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+  var done = loadDone(S.key);
+  function saveDone() { lsSet('w:' + S.key, JSON.stringify(done)); }
+
+  /* ---- 週ごとの記録: その週のスケジュールも一緒に残す(あとで時間割を変えても、記録は変わらない) ---- */
+  function toArr(t) { return [t.day, t.koma, t.s, t.n, t.subj, t.label, t.id]; }
+  function snapSave(key, list) { lsSet('wt:' + key, JSON.stringify(list.map(toArr))); }
+  function loadSnap(key) { var raw = lsGet('wt:' + key); if (raw) { try { var t = validSched({ v: 0, t: JSON.parse(raw) }); if (t) return normList(t); } catch (e) {} } return null; }
+  function ensureSnap(key) { if (lsGet('wt:' + key) == null) snapSave(key, tasks); }
+  function weekTasks(key) { return loadSnap(key) || tasks; }
+  function weekDone(key) { return key === S.key ? done : loadDone(key); }
+  function weekKeys() {
+    var set = {};
+    function add(k) { var m = /^(?:w|wt):(\d{4}-\d{2}-\d{2})$/.exec(k); if (m) set[m[1]] = 1; }
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('ie-study:') === 0) add(k.slice(9)); } } catch (e) {}
+    Object.keys(mem).forEach(add);
+    set[S.key] = 1;
+    return Object.keys(set).filter(function (k) { return k <= S.key; }).sort().reverse();
+  }
+  function rollover() {
+    var k = ymd(mondayOf(new Date()));
+    if (k === S.key) return false;
+    S.key = k; S.sel = todayNum(); S.hist = k; done = loadDone(k);
+    tasks = normList(sched.tasks); if (isOver(k)) { var osn = loadSnap(k); if (osn) tasks = osn; }
+    ensureSnap(k); S.ed = null; S.delId = null; if (S.ekey < k) S.ekey = k; if (S.wk && S.wk <= k) S.wk = '';
+    return true;
+  }
+  if (isOver(S.key)) { var osn0 = loadSnap(S.key); if (osn0) tasks = osn0; }
+  ensureSnap(S.key);
+  S.banner = applyHash();
+
+  function applySched(list, v) {
+    var old = tasks;
+    v = v || Date.now(); if (!(v > sched.v)) v = sched.v + 1;
+    var nt = normList(list);
+    lsSet('sched', JSON.stringify({ v: v, t: nt.map(toArr) }));
+    sched = { v: v, tasks: nt };
+    if (isOver(S.key)) return; /* 今週が「今週だけ」の時間割のときは、今週の予定は変えない */
+    tasks = nt;
+    var keep = old.filter(function (t) { return done[t.id] && !nt.some(function (x) { return x.id === t.id; }); });
+    snapSave(S.key, nt.concat(keep));
+  }
+  /* ---- 先生が作る「この時間割で開くリンク」 ---- */
+  function linkText(name) {
+    var o = { v: sched.v, t: tasks.map(toArr), p: PATTERN };
+    if (name) o.n = name;
+    var u = location.href.split('#')[0];
+    return u + '#SIE-S1:' + b64e(JSON.stringify(o));
+  }
+  function applyHash() {
+    var h = location.hash || '', i = h.indexOf('SIE-S1:');
+    if (i < 0) return null;
+    var m = h.slice(i + 7).replace(/\s+/g, '').match(/^[A-Za-z0-9+\/=_-]+/), o, t;
+    if (!m) return { kind: 'err', text: 'リンクを読み取れませんでした。もう一度、先生に送ってもらってください。' };
+    try { o = JSON.parse(b64d(m[0])); } catch (e) { return { kind: 'err', text: 'リンクを読み取れませんでした。もう一度、先生に送ってもらってください。' }; }
+    t = validSched(o);
+    if (!t) return { kind: 'err', text: 'リンクの内容が正しくありません。先生に送りなおしてもらってください。' };
+    if (checkIdent(o)) return { kind: 'ok', text: '別の生徒の時間割に切りかえます。' };
+    var renamed = false;
+    if (typeof o.n === 'string' && o.n && (o.n !== lsGet('linkname') || !S.name)) { S.name = o.n.slice(0, 20); lsSet('name', S.name); lsSet('linkname', o.n); renamed = true; }
+    if (typeof o.w === 'string') { var wr = applyWeekCode(o, t); if (wr.same) return renamed ? { kind: 'ok', text: '名前を「' + S.name + '」にしました。' } : null; return wr; }
+    var pch = typeof o.p === 'string' && setPattern(o.p);
+    var chg = false;
+    if (o.v > tvGet() || pch) { applySched(t, o.v); lsSet('tv', String(o.v)); chg = true; }
+    var nw = applyWs(o);
+    if (chg || nw) return { kind: 'ok', text: '先生の時間割を読み込みました。' + (nw ? '(今後の週の時間割 ' + nw + '週分を含みます)' : '') };
+    if (renamed) return { kind: 'ok', text: '名前を「' + S.name + '」にしました。' };
+    return null; /* すでに同じか、もっと新しい時間割を使っている(ホーム画面から開くたびに、ここを通る) */
+  }
+  function wipeLocal() {
+    try { var ks = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('ie-study:') === 0) ks.push(k); } ks.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+    mem = {};
+  }
+  function identOf(o) { return o.i ? 'i:' + o.i : (typeof o.n === 'string' && o.n ? 'n:' + o.n : ''); }
+  function identChanged(o) {
+    var idn = identOf(o); if (!idn) return false;
+    var st = lsGet('ident'), ln = lsGet('linkname');
+    if (!st) { if (!ln) return false; st = 'n:' + ln; }
+    if (st === idn) return false;
+    if (st.indexOf('n:') === 0 && o.i && st === 'n:' + (o.n || '')) return false;
+    if (st.indexOf('i:') === 0 && !o.i && ln && ln === o.n) return false;
+    return true;
+  }
+  function checkIdent(o) {
+    if (identChanged(o)) { wipeLocal(); lsSet('ident', identOf(o)); try { location.reload(); } catch (e) {} return true; }
+    var idn = identOf(o); if (idn) lsSet('ident', idn);
+    return false;
+  }
+  function tvGet() { return +(lsGet('tv') || 0) || BASE.v; }
+  function applyWs(o) {
+    var n = 0; if (!o.ws || typeof o.ws !== 'object') return 0;
+    Object.keys(o.ws).slice(0, 20).forEach(function (w) {
+      var x = o.ws[w]; if (!x || typeof x.v !== 'number') return;
+      var t = validSched({ v: x.v, t: x.t }); if (!t) return;
+      var r = applyWeekCode({ w: w, v: x.v }, t);
+      if (r.kind === 'ok' && !r.same) n++;
+    });
+    return n;
+  }
+  function newId() { return 'u' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
+
+  /* ---- 週ごとの時間割(今週だけ・来週以降だけ)。基本の時間割(sched)とは別に、その週の予定だけを持つ ---- */
+  function isOver(key) { return lsGet('wo:' + key) === '1'; }
+  function wkKey() { return S.wk && S.wk > S.key ? S.wk : S.key; }
+  function weekListFor(k) { return k === S.key ? tasks : ((isOver(k) && loadSnap(k)) || normList(sched.tasks)); }
+  function weekSelHtml() {
+    if (EMB) return '';
+    var out = '<fieldset class="noprint"><legend>どの週を見ますか?</legend><div class="chips" role="group" aria-label="期間">';
+    for (var i = 0; i < 9; i++) { var k = ymd(addDays(parseYmd(S.key), i * 7)); out += '<button type="button" class="cbtn" data-wk="' + (i ? k : '') + '" aria-pressed="' + (k === wkKey()) + '">' + (i === 0 ? '今週' : i === 1 ? '来週' : i + '週あと') + ' ' + rangeLabel(k) + (i && isOver(k) ? '(別の時間割)' : '') + '</button>'; }
+    return out + '</div></fieldset>' + (wkKey() !== S.key ? '<p class="hint noprint">先の週です。「表から時間割を変える」で、この週だけの予定を作れます。</p>' : '');
+  }
+  function embedWeek() { var h; EMB = true; try { h = weekPanel(); } finally { EMB = false; } return h; }
+  function ekeyNow() { return S.tab === 'edit' ? S.ekey : (S.tab === 'week' ? wkKey() : S.key); }
+  function emodeNow() { var k = ekeyNow(); if (k !== S.key) return 'week'; return S.tab === 'edit' ? S.emode : (isOver(S.key) ? 'week' : 'base'); }
+  function editList() {
+    if (emodeNow() === 'base') return normList(sched.tasks);
+    var k = ekeyNow();
+    if (k === S.key) return tasks;
+    return (isOver(k) && loadSnap(k)) || normList(sched.tasks);
+  }
+  function putEdit(list) {
+    if (emodeNow() === 'base') { applySched(list); return; }
+    var k = ekeyNow(), nt = normList(list);
+    snapSave(k, nt); lsSet('wo:' + k, '1');
+    if (k === S.key) tasks = nt;
+  }
+  function applyWeekCode(o, t) {
+    var w = o.w;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(w) || parseYmd(w).getDay() !== 1) return { kind: 'err', text: 'コードの週の日付が正しくありません。先生に送りなおしてもらってください。' };
+    if (w < S.key) return { kind: 'ok', same: true, text: rangeLabel(w) + 'の週は、もう終わっているので使いません。' };
+    var cv = +(lsGet('wv:' + w) || 0);
+    if (cv >= o.v) return { kind: 'ok', same: true, text: rangeLabel(w) + 'の週は、すでに同じか新しい時間割です。' };
+    var nt = normList(t);
+    snapSave(w, nt); lsSet('wo:' + w, '1'); lsSet('wv:' + w, String(o.v));
+    if (w === S.key) tasks = nt;
+    return { kind: 'ok', text: rangeLabel(w) + 'の週の時間割を読み込みました(その週だけ)。' };
+  }
+  function weekSel() {
+    var out = '<fieldset><legend>どの週の時間割?</legend><div class="chips" role="group" aria-label="週">';
+    for (var i = 0; i < 9; i++) { var k = ymd(addDays(parseYmd(S.key), i * 7)); out += '<button type="button" class="cbtn" data-ewk="' + k + '" aria-pressed="' + (k === S.ekey) + '">' + (i === 0 ? '今週' : i === 1 ? '来週' : i + '週あと') + ' ' + rangeLabel(k) + (isOver(k) ? '(この週だけ変更ずみ)' : '') + '</button>'; }
+    out += '</div></fieldset>';
+    if (S.ekey === S.key) out += '<fieldset><legend>変えかた</legend><div class="chips" role="group" aria-label="変えかた"><button type="button" class="cbtn" data-emode="base" aria-pressed="' + (S.emode === 'base') + '">これから毎週</button><button type="button" class="cbtn" data-emode="week" aria-pressed="' + (S.emode === 'week') + '">今週だけ</button></div></fieldset>';
+    if (emodeNow() === 'week' && isOver(S.ekey)) out += '<div class="actions"><button type="button" class="btn dng' + (S.wrAsk ? ' arm' : '') + '" data-wreset>' + (S.wrAsk ? 'もう一度おすと、基本の時間割にもどします' : 'この週の変更をやめて、基本の時間割にもどす') + '</button></div>';
+    return out;
+  }
+
+  function stats(list, dn) {
+    var tot = 0, dm = 0, subj = {}, day = {};
+    list.forEach(function (t) {
+      var d = !!dn[t.id]; tot += t.mins; if (d) dm += t.mins;
+      var s = subj[t.subj] || (subj[t.subj] = { tot: 0, dn: 0 }); s.tot += t.mins; if (d) s.dn += t.mins;
+      var y = day[t.day] || (day[t.day] = { n: 0, c: 0 }); y.n++; if (d) y.c++;
+    });
+    return { tot: tot, dn: dm, subj: subj, day: day, n: list.length, c: list.filter(function (t) { return !!dn[t.id]; }).length };
+  }
+  function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+  function okTs(ts) { return typeof ts === 'number' && ts > 1e12; }
+  function fmtDT(ts) { if (!okTs(ts)) return ''; var d = new Date(ts); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + WD[d.getDay()] + ') ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function fmtT(ts) { if (!okTs(ts)) return ''; var d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+  function ring(c, t) {
+    var R = 28, C = 2 * Math.PI * R, p = t ? c / t : 0;
+    return '<div class="ring" role="img" aria-label="できた数 ' + c + ' / ' + t + '"><svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true"><circle class="trk" cx="34" cy="34" r="' + R + '" fill="none" stroke-width="7"/><circle class="val" cx="34" cy="34" r="' + R + '" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (p * C).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg><div class="cnt"><div>' + c + '/' + t + '<small>できた</small></div></div></div>';
+  }
+  function subjBars(st) {
+    var out = '';
+    SUBJ_LIST.forEach(function (s) {
+      var x = st.subj[s]; if (!x) return;
+      out += '<div class="sub ' + SUBJ[s] + '"><b>' + s + '</b><div class="bar" role="img" aria-label="' + s + ' ' + dur(x.dn) + ' / ' + dur(x.tot) + '"><i style="width:' + pct(x.dn, x.tot) + '%"></i></div><span>' + dur(x.dn) + ' / ' + dur(x.tot) + '</span></div>';
+    });
+    return out;
+  }
+
+  function block(t) {
+    var top = (t.start - KOMA[t.koma].start) * PPM, h = t.mins * PPM - 3;
+    var dv = done[t.id], d = !!dv, n = nowMin(), isToday = S.sel === todayNum();
+    var late = (isToday && !d && t.end <= n) ? '<span class="tag">まだ</span>' : '';
+    var cur = isToday && t.start <= n && n < t.end;
+    var cls = 'task ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (t.mins >= 60 ? ' tall' : '') + (d ? ' done' : '') + (cur ? ' now' : '');
+    var stamp = d && okTs(dv) ? (t.mins >= 30 ? '<div class="l2">' + hm(t.start) + '〜' + hm(t.end) + ' ・ 完了 ' + fmtDT(dv) + '</div>' : '') : (t.mins >= 30 ? '<div class="l2">' + hm(t.start) + '〜' + hm(t.end) + '</div>' : '');
+    var short = d && okTs(dv) && t.mins < 30 ? '<span class="mins">✓' + fmtT(dv) + '</span>' : '';
+    return '<div class="' + cls + '" data-id="' + esc(t.id) + '" data-s="' + t.start + '" data-e="' + t.end + '" style="top:' + top + 'px;height:' + h + 'px">' +
+      '<div class="tx"><div class="l1"><span class="subj">' + esc(t.subj) + '</span><span class="lb">' + esc(t.label) + '</span><span class="mins">' + t.mins + '分</span>' + short + late + '</div>' + stamp + '</div>' +
+      '<button type="button" class="chk" data-toggle="' + esc(t.id) + '" aria-pressed="' + d + '" aria-label="' + esc(t.subj + ' ' + t.label + '(' + hm(t.start) + ')を終えた') + '">' + CHECK + '</button></div>';
+  }
+
+  function timeline(day) {
+    var out = '<div class="komas">';
+    komasOf(day).forEach(function (k) {
+      var ks = KOMA[k].start, ns = KOMA[k].slots, len = ns * 15, g = tasks.filter(function (t) { return t.day === day && t.koma === k; });
+      out += '<div class="koma"><h3>' + kname(k, day) + '<span>' + hm(ks) + '〜' + hm(ks + len) + '</span></h3><div class="tl" data-ks="' + ks + '" data-len="' + len + '" style="--slot:' + (15 * PPM) + 'px;--rows:' + ns + ';height:' + (len * PPM) + 'px">';
+      for (var i = 0; i < ns; i++) {
+        var mm = ks + i * 15, long = k === 'F', lab = (!long || mm % 30 === 0) ? hm(mm) : '';
+        out += '<div class="slot' + (long && mm % 60 === 0 ? ' hr' : '') + (long && mm % 30 !== 0 ? ' q' : '') + '"><span class="lab">' + lab + '</span></div>';
+      }
+      out += '<div class="blocks">' + g.map(block).join('') + '</div><div class="nowline" hidden></div></div></div>';
+    });
+    return out + '</div>';
+  }
+
+  function dlist(day) {
+    var ts = tasksOf(tasks, day), n = nowMin(), isToday = day === todayNum();
+    return '<div class="dl24" id="kz-D">' + (ts.length ? '' : '<p class="empty">この日の予定はありません。「変更」タブで追加できます。</p>') + withMarks(ts, function (t, note) {
+      var dv = done[t.id], d = !!dv, late = ((isToday && !d && t.end <= n) ? '<span class="tag">まだ</span>' : '') + (note ? '<span class="tag">' + esc(note) + '</span>' : ''), cur = isToday && t.start <= n && n < t.end;
+      return '<div class="tk ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (d ? ' done' : '') + (cur ? ' now' : '') + '" data-id="' + esc(t.id) + '"><div class="tm">' + hm(t.start) + '<br>〜' + hm(t.end) + '</div><div class="tx"><div class="l1"><span class="subj">' + esc(t.subj) + '</span><span class="lb">' + esc(t.label) + '</span><span class="mins">' + t.mins + '分</span>' + late + '</div>' + (d && okTs(dv) ? '<div class="l2">完了 ' + fmtDT(dv) + '</div>' : '') + '</div>' +
+        '<button type="button" class="chk" data-toggle="' + esc(t.id) + '" aria-pressed="' + d + '" aria-label="' + esc(t.subj + ' ' + t.label + '(' + hm(t.start) + ')を終えた') + '">' + CHECK + '</button></div>';
+    }, day) + '</div>';
+  }
+  function dayTabs() {
+    var st = stats(tasks, done);
+    return '<nav class="days" aria-label="曜日">' + ORDER.map(function (d) {
+      var y = st.day[d] || { n: 0, c: 0 }, dt = addDays(parseYmd(S.key), (d + 6) % 7);
+      return '<button type="button" class="day' + (y.n && y.c === y.n ? ' full' : '') + '" data-day="' + d + '" aria-pressed="' + (d === S.sel) + '"' + (d === todayNum() ? ' aria-current="date"' : '') + '><span class="dw">' + WD[d] + '</span><span class="dn">' + dt.getDate() + '</span><span class="df">' + y.c + '/' + y.n + '</span>' + (d === todayNum() ? '<span class="tdy">今日</span>' : '') + '</button>';
+    }).join('') + '</nav>';
+  }
+
+  function hero() {
+    var ts = tasksOf(tasks, S.sel), c = ts.filter(function (t) { return done[t.id]; }).length, total = ts.reduce(function (a, t) { return a + t.mins; }, 0);
+    if (!ts.length) return '<div class="hero plain"><div class="hero-top"><span class="badge plain">' + WD[S.sel] + '曜日</span></div><h2>この日の予定はありません。</h2></div>';
+    if (c === ts.length) return '<div class="hero plain"><div class="hero-top"><span class="badge plain">おつかれさま</span></div><h2>' + (S.sel === todayNum() ? '今日' : WD[S.sel] + '曜日') + 'の予定は、ぜんぶ終わり。</h2><p class="note">' + dur(total) + 'がんばりました。</p></div>';
+    if (S.sel !== todayNum()) return '<div class="hero plain"><div class="hero-top"><span class="badge plain">' + WD[S.sel] + '曜日</span></div><h2>' + ts.length + 'つの予定、合計' + dur(total) + '</h2><p class="note">' + hm(ts[0].start) + 'から' + hm(ts[ts.length - 1].end) + 'まで。</p></div>';
+    var n = nowMin(), cur = null, nxt = null, left = 0;
+    ts.forEach(function (t) {
+      if (!cur && t.start <= n && n < t.end) cur = t;
+      if (!nxt && t.start > n && !done[t.id]) nxt = t;
+      if (t.end <= n && !done[t.id]) left++;
+    });
+    if (cur) {
+      var rem = Math.ceil(cur.end - n), pr = Math.min(100, Math.max(0, (n - cur.start) / cur.mins * 100));
+      return '<div class="hero ' + SUBJ[cur.subj] + '"><div class="hero-top"><span class="badge">いま</span><span class="chip">' + esc(cur.subj) + '</span></div><h2>' + esc(cur.label) + '</h2><p class="range">' + hm(cur.start) + '〜' + hm(cur.end) + '(' + cur.mins + '分)</p><div class="remain"><span>あと</span><strong>' + rem + '</strong><span>分</span></div><div class="bar" aria-hidden="true"><i style="width:' + pr.toFixed(0) + '%"></i></div>' + (left ? '<p class="note">さっきまでの予定が、あと' + left + 'つ残っています。</p>' : '') + '</div>';
+    }
+    if (nxt) {
+      var d = Math.ceil(nxt.start - n);
+      return '<div class="hero ' + SUBJ[nxt.subj] + '"><div class="hero-top"><span class="badge plain">つぎ</span><span class="chip">' + esc(nxt.subj) + '</span></div><h2>' + esc(nxt.label) + '</h2><p class="range">' + hm(nxt.start) + '〜' + hm(nxt.end) + '(' + nxt.mins + '分)</p><div class="remain"><strong>' + d + '</strong><span>分後にスタート</span></div>' + (left ? '<p class="note">終わっていない予定が、あと' + left + 'つあります。</p>' : '') + '</div>';
+    }
+    return '<div class="hero plain"><div class="hero-top"><span class="badge">のこり</span></div><h2>終わっていない予定が' + left + 'つあります。</h2><p class="note">時間のあるときに、やってしまおう。</p></div>';
+  }
+
+  /* ---- 週間(一覧・印刷): 最初の「週間学習スケジュール」表と同じ並び(曜日が横、コマが縦) ---- */
+  var ROWBASE = { A: 2, B: 9, C: 16 };
+  var EMB = false, WKE = false, WKD = {}; /* EMB: 変更タブの中に週間表をうめこむ / WKE: 表から変更できる / WKD: 表に出す週のチェック */
+  function gcell(t, extra, style) {
+    var d = WKD[t.id] && !S.blank, big = t.mins >= 60;
+    var inner = '<span class="g1"><i class="bx" aria-label="' + (d ? 'できた' : 'まだ') + '">' + (d ? '☑' : '☐') + '</i>' + esc(t.subj) + ' ' + esc(t.label) + '</span><span class="g2">' + (extra ? hm(t.start) + '〜' + hm(t.end) + ' ・ ' : '') + t.mins + '分</span>';
+    var cls = 'gc ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (big ? ' big' : '') + (extra || ' one');
+    if (!WKE) return '<div class="' + cls + '" style="' + style + '">' + inner + '</div>';
+    var ask = S.delId === t.id;
+    return '<div class="' + cls + ' wk" style="' + style + '"><button type="button" class="gedit" data-wedit="' + esc(t.id) + '" aria-label="' + esc(t.subj + ' ' + t.label + ' ' + hm(t.start) + 'を変える') + '">' + inner + '</button>' +
+      '<button type="button" class="gdel noprint' + (ask ? ' arm' : '') + '" ' + (ask ? 'data-delok' : 'data-del') + '="' + esc(t.id) + '" aria-label="' + esc(t.subj + ' ' + t.label) + 'を' + (ask ? '本当に消す' : '消す') + '">' + (ask ? '消す?' : '×') + '</button></div>';
+  }
+  function weekPanel24() {
+    var tasks = EMB ? editList() : weekListFor(wkKey()), done = weekDone(EMB ? S.ekey : wkKey()), wk = EMB ? S.ekey : wkKey(), edit = EMB || S.wkEdit;
+    WKD = done; WKE = edit;
+    var st = stats(tasks, done), out = '', lo = 1020, hi = 1320;
+    if (edit) { lo = 0; hi = 1440; } else tasks.forEach(function (t) { if (t.start < lo) lo = t.start; if (t.end > hi) hi = t.end; });
+    lo = Math.floor(lo / 60) * 60; hi = Math.min(1440, Math.ceil(hi / 60) * 60);
+    var R = (hi - lo) / 5, rowOf = function (m) { return 2 + (m - lo) / 5; };
+    out += '<section class="panel" aria-labelledby="wkt">' + weekSelHtml() + '<div class="actions noprint"' + (EMB ? ' hidden' : '') + '><button type="button" class="btn pri" data-print>印刷する</button><button type="button" class="btn" data-wkedit aria-pressed="' + S.wkEdit + '">' + (S.wkEdit ? '表からの変更をおわる' : '表から時間割を変える') + '</button><button type="button" class="btn" data-blank aria-pressed="' + S.blank + '">' + (S.blank ? '☐を空にして表示中' : '☐を空にして見る(印刷用)') + '</button></div>';
+    out += '<div class="gtop"' + (EMB ? ' hidden' : '') + '><div><h1 id="wkt">週間学習スケジュール</h1><p>' + PATTERNS[PATTERN] + 'コース ・ 月曜〜日曜 ・ 24時間</p></div><div class="gfields"><span>名前 <input type="text" class="nmin" id="nm2" maxlength="20" autocomplete="off" placeholder="なまえ" value="' + esc(S.name) + '"><span class="ul nmprint">' + esc(S.name) + '&nbsp;</span></span><span>期間 <span class="ul">' + rangeLabel(wk) + '</span></span></div></div>';
+    out += '<div class="wkwrap gwrap"><div class="ggrid g24" style="--u:' + (edit ? 7 : 6) + 'px;grid-template-rows:44px repeat(' + R + ', var(--u))" role="group" aria-label="週間スケジュール">';
+    out += '<div class="gcorner">コマ ・ 時間</div>';
+    ORDER.forEach(function (d, i) {
+      var dt = addDays(parseYmd(wk), (d + 6) % 7);
+      out += '<div class="gh' + (d === todayNum() && wk === S.key ? ' today' : '') + '" id="wc-' + d + '" style="grid-column:' + (3 + i) + ';grid-row:1">' + WD[d] + '曜日<small>' + (dt.getMonth() + 1) + '/' + dt.getDate() + '</small></div>';
+    });
+    for (var m = lo; m < hi; m += 30) out += '<div class="gt24" style="grid-column:2;grid-row:' + rowOf(m) + ' / span 6">' + hm(m) + '</div>';
+    [['A', 1020, 1110], ['B', 1115, 1205], ['C', 1210, 1300]].forEach(function (f) {
+      if (f[1] < lo || f[2] > hi) return;
+      out += '<div class="gk" style="grid-column:1;grid-row:' + rowOf(f[1]) + ' / span ' + (f[2] - f[1]) / 5 + '"><b>' + f[0] + 'コマ</b><span>' + hm(f[1]) + '<br>〜' + hm(f[2]) + '</span></div>';
+      ORDER.forEach(function (d, i) { if (frameDay(d)) out += '<div class="fbg" style="grid-column:' + (3 + i) + ';grid-row:' + rowOf(f[1]) + ' / span ' + (f[2] - f[1]) / 5 + '"></div>'; });
+    });
+    if (edit) {
+      ORDER.forEach(function (d, i) {
+        var dl = tasksOf(tasks, d);
+        for (var mm = lo; mm < hi; mm += 15) {
+          if (dl.some(function (t) { return t.start < mm + 15 && t.end > mm; })) continue;
+          out += '<button type="button" class="gadd noprint" data-wadd="' + d + ':E:' + (mm / 5) + '" style="grid-column:' + (3 + i) + ';grid-row:' + rowOf(mm) + ' / span 3" aria-label="' + WD[d] + '曜日 ' + hm(mm) + 'に予定を追加">＋</button>';
+        }
+      });
+    }
+    tasks.forEach(function (t) {
+      if (t.start < lo || t.end > hi) return;
+      out += gcell(t, t.mins >= 45 ? ' stack' : '', 'grid-column:' + (3 + ORDER.indexOf(t.day)) + ';grid-row:' + rowOf(t.start) + ' / span ' + (t.mins / 5));
+    });
+    out += '</div></div>' + (WKE ? '<p class="hint noprint">変えたい予定や、「＋」のところを押します。</p>' : '') + '<div class="tot">';
+    SUBJ_LIST.forEach(function (x) { var y = st.subj[x]; if (y) out += '<span>' + x + ' <b>' + dur(y.tot) + '</b></span>'; });
+    out += '<span>合計 <b>' + dur(st.tot) + '</b></span></div></section>';
+    if (WKE && S.ed && !EMB) out += edForm();
+    return out;
+  }
+  function weekPanel() {
+    if (is24()) return weekPanel24();
+    var tasks = EMB ? editList() : weekListFor(wkKey()), done = weekDone(EMB ? S.ekey : wkKey()), wk = EMB ? S.ekey : wkKey(), edit = EMB || S.wkEdit;
+    WKD = done; WKE = edit;
+    var st = stats(tasks, done), out = '';
+    out += '<section class="panel" aria-labelledby="wkt">' + weekSelHtml() + '<div class="actions noprint"' + (EMB ? ' hidden' : '') + '><button type="button" class="btn pri" data-print>印刷する</button><button type="button" class="btn" data-wkedit aria-pressed="' + S.wkEdit + '">' + (S.wkEdit ? '表からの変更をおわる' : '表から時間割を変える') + '</button><button type="button" class="btn" data-blank aria-pressed="' + S.blank + '">' + (S.blank ? '☐を空にして表示中' : '☐を空にして見る(印刷用)') + '</button></div>';
+    out += '<div class="gtop"' + (EMB ? ' hidden' : '') + '><div><h1 id="wkt">週間学習スケジュール</h1><p>中学受験コース ・ 月曜〜日曜 ・ 15分ごとの勉強プラン</p></div><div class="gfields"><span>名前 <input type="text" class="nmin" id="nm2" maxlength="20" autocomplete="off" placeholder="なまえ" value="' + esc(S.name) + '"><span class="ul nmprint">' + esc(S.name) + '&nbsp;</span></span><span>期間 <span class="ul">' + rangeLabel(wk) + '</span></span></div></div>';
+    out += '<div class="wkwrap gwrap"><div class="ggrid" role="group" aria-label="週間スケジュール">';
+    out += '<div class="gcorner">コマ ・ 時間</div>';
+    ORDER.forEach(function (d, i) {
+      var dt = addDays(parseYmd(wk), (d + 6) % 7);
+      out += '<div class="gh' + (d === todayNum() && wk === S.key ? ' today' : '') + '" style="grid-column:' + (3 + i) + ';grid-row:1">' + WD[d] + '曜日<small>' + (dt.getMonth() + 1) + '/' + dt.getDate() + '</small></div>';
+    });
+    KOMAS.forEach(function (k) {
+      var r0 = ROWBASE[k], ks = KOMA[k].start;
+      out += '<div class="gk" id="gk-' + k + '" style="grid-column:1;grid-row:' + r0 + ' / span 6"><b>' + KOMA[k].name + '</b><span>' + hm(ks) + '<br>〜' + hm(ks + 90) + '</span></div>';
+      for (var i = 0; i < 6; i++) out += '<div class="gt" style="grid-column:2;grid-row:' + (r0 + i) + '">' + hm(ks + i * 15) + '</div>';
+    });
+    if (WKE) {
+      ORDER.forEach(function (d, i) {
+        if (isF(d)) return;
+        KOMAS.forEach(function (k) {
+          for (var si = 0; si < 6; si++) {
+            var busy = tasks.some(function (t) { return t.day === d && t.koma === k && si >= t.s && si < t.s + t.n; });
+            if (!busy) out += '<button type="button" class="gadd noprint" data-wadd="' + d + ':' + k + ':' + si + '" style="grid-column:' + (3 + i) + ';grid-row:' + (ROWBASE[k] + si) + '" aria-label="' + WD[d] + '曜日 ' + hm(KOMA[k].start + si * 15) + 'に予定を追加">＋</button>';
+          }
+        });
+      });
+    }
+    tasks.filter(function (t) { return !isF(t.day) && ROWBASE[t.koma]; }).forEach(function (t) {
+      var col = 3 + ORDER.indexOf(t.day), row = ROWBASE[t.koma] + t.s;
+      out += gcell(t, t.mins < 30 ? '' : ' stack', 'grid-column:' + col + ';grid-row:' + row + ' / span ' + t.n);
+    });
+    [3, 0].forEach(function (d) {
+      out += '<div class="gsun" id="' + (d === 0 ? 'gsun' : 'gsun-' + d) + '" style="grid-column:' + (3 + ORDER.indexOf(d)) + '">' + tasksOf(tasks, d).map(function (t) { return gcell(t, ' stack', 'min-height:calc(var(--rh) * ' + Math.max(1, Math.ceil(t.n / 2)) + ')'); }).join('') + (WKE ? '<button type="button" class="gadd wide noprint" data-wadd="' + d + ':F:0">＋ ' + WD[d] + '曜日に予定を追加</button>' : '') + '</div>';
+    });
+    out += '</div></div>' + (WKE ? '<p class="hint noprint">変えたい予定や、「＋」のところを押します。</p>' : '') + '<p class="hint">水曜日・日曜日は9:00〜22:00のあいだで決めるので、時間つきで上から順にならんでいます。</p><div class="tot">';
+    SUBJ_LIST.forEach(function (s) { var x = st.subj[s]; if (x) out += '<span>' + s + ' <b>' + dur(x.tot) + '</b></span>'; });
+    out += '<span>合計 <b>' + dur(st.tot) + '</b></span></div></section>';
+    if (WKE && S.ed && !EMB) out += edForm();
+    return out;
+  }
+
+  /* ---- 記録 ---- */
+  function reportText(key) {
+    var wt = weekTasks(key), dn = weekDone(key), st = stats(wt, dn), ids = [], ts = {};
+    wt.forEach(function (t) { if (dn[t.id]) { ids.push(t.id); if (okTs(dn[t.id])) ts[t.id] = dn[t.id]; } });
+    var lines = ['【勉強きろく】' + (S.name ? S.name + 'さん ' : '') + rangeLabel(key), 'できた ' + st.c + '/' + st.n + '件(' + dur(st.dn) + ' / 予定 ' + dur(st.tot) + ')'];
+    SUBJ_LIST.forEach(function (s) { var x = st.subj[s]; if (x) lines.push(s + ' ' + dur(x.dn) + ' / ' + dur(x.tot)); });
+    lines.push('▼ここから下は先生用のコードです。消さずに、そのまま送ってください。');
+    var o = { w: key, ver: sched.v, n: S.name, d: ids, t: ts };
+    if (sched.v !== BASE.v || isOver(key)) o.s = wt.map(toArr);
+    lines.push('SIE-R1:' + b64e(JSON.stringify(o)));
+    return lines.join('\n');
+  }
+  function recordPanel() {
+    var keys = weekKeys(); if (keys.indexOf(S.hist) < 0) S.hist = S.key;
+    var key = S.hist, wt = weekTasks(key), dn = weekDone(key), st = stats(wt, dn), out = '';
+    out += '<section class="panel" aria-labelledby="rc"><h2 id="rc">週ごとの記録</h2><p class="hint">毎週、月曜日の0:00に新しい週になり、前の週の記録は、ここに残ります。</p>';
+    out += '<div class="field"><label for="hsel">どの週を見る?</label><select id="hsel">' + keys.map(function (k) { return '<option value="' + k + '"' + (k === key ? ' selected' : '') + '>' + (k === S.key ? '今週 ' : '') + rangeLabel(k) + '</option>'; }).join('') + '</select></div>';
+    out += '<p class="sumline">できた ' + st.c + '/' + st.n + '件(' + pct(st.dn, st.tot) + '%)・ ' + dur(st.dn) + ' / 予定 ' + dur(st.tot) + '</p>';
+    out += '<div class="subs">' + (subjBars(st) || '<p class="hint">この週の予定はありません。</p>') + '</div>';
+    var fin = wt.filter(function (t) { return dn[t.id]; }).sort(function (a, b) { return (okTs(dn[a.id]) ? dn[a.id] : 9e15) - (okTs(dn[b.id]) ? dn[b.id] : 9e15); });
+    var rest = wt.filter(function (t) { return !dn[t.id]; }).sort(function (a, b) { return ((a.day + 6) % 7) - ((b.day + 6) % 7) || a.start - b.start; });
+    out += '<h3 class="pv">できた記録(完了した日時)</h3>';
+    out += fin.length ? '<ul class="loglist">' + fin.map(function (t) { return '<li class="lg ' + SUBJ[t.subj] + '"><time>' + (fmtDT(dn[t.id]) || '日時なし') + '</time><span><b>' + esc(t.subj) + '</b> ' + esc(t.label) + '(' + t.mins + '分)</span></li>'; }).join('') + '</ul>' : '<p class="hint">まだありません。</p>';
+    out += '<h3 class="pv">まだの予定(' + rest.length + ')</h3>';
+    out += rest.length ? '<ul class="loglist">' + rest.map(function (t) { return '<li class="lg no"><time>' + WD[t.day] + '曜 ' + hm(t.start) + '</time><span><b>' + esc(t.subj) + '</b> ' + esc(t.label) + '(' + t.mins + '分)</span></li>'; }).join('') + '</ul>' : '<p class="hint">ぜんぶ終わっています。</p>';
+    out += '</section>';
+    out += '<section class="panel" aria-labelledby="rp"><h2 id="rp">先生におくる</h2><p class="hint">上で選んだ週の記録を、下の文章にしました。コピーして先生に送ろう(LINEやメール)。月曜日の16:30に、先生が前の週をふり返ります。</p>' +
+      '<div class="field"><label for="nm">なまえ</label><input type="text" id="nm" maxlength="20" autocomplete="off" value="' + esc(S.name) + '"></div>' +
+      '<div class="field"><label for="rep">送る文章</label><textarea id="rep" class="code" readonly>' + esc(reportText(key)) + '</textarea></div><div class="actions"><button type="button" class="btn pri" data-copy="rep">コピー</button></div>' +
+      '<p class="hint">記録は、この端末のブラウザに保存されます。ブラウザの履歴やサイトのデータを消すと、記録も消えます。</p></section>';
+    return out;
+  }
+
+  /* ---- 変更 ---- */
+  function opt(v, label, sel) { return '<option value="' + v + '"' + (sel ? ' selected' : '') + '>' + label + '</option>'; }
+  var CHIPS = ['授業', '授業の直し', '先取り', '宿題', '直し', '漢字・語句', '練習', '暗記', '単語', 'まとめ'];
+  var FMARKS = [{ at: 1020, k: 'k', l: 'Aコマ', r: '17:00〜18:30' }, { at: 1110, k: 'b', l: '休憩', r: '18:30〜18:35(5分)' }, { at: 1115, k: 'k', l: 'Bコマ', r: '18:35〜20:05' }, { at: 1205, k: 'b', l: '休憩', r: '20:05〜20:10(5分)' }, { at: 1210, k: 'k', l: 'Cコマ', r: '20:10〜21:40' }];
+  var PPM24 = 2.4;
+  var KSTART = { A: 1020, B: 1115, C: 1210 };
+  var FRAMES = [{ a: 1020, b: 1110, l: 'Aコマ' }, { a: 1110, b: 1115, l: '休憩', br: 1 }, { a: 1115, b: 1205, l: 'Bコマ' }, { a: 1205, b: 1210, l: '休憩', br: 1 }, { a: 1210, b: 1300, l: 'Cコマ' }];
+  function frameDay(day) { return !(day === 0 || day === 3); }
+  function tl24(list, day, selId) {
+    var ts = list.filter(function (t) { return t.day === day; }), H = 1440 * PPM24;
+    var out = '<div class="koma" id="kz-D"><h3>1日(24時間)<span>0:00〜24:00</span></h3><div class="jt"><span>時間へ移動</span>' + [[0, '0:00'], [360, '6:00'], [720, '12:00'], [960, '16:00'], [1200, '20:00']].map(function (j) { return '<button type="button" class="cbtn" data-jt="' + j[0] + '">' + j[1] + '</button>'; }).join('') + '</div><div class="tl tl24" style="--slot:' + (15 * PPM24) + 'px;--rows:96;height:' + H + 'px">';
+    if (frameDay(day)) FRAMES.forEach(function (f) { out += '<div class="fband' + (f.br ? ' br' : '') + '" style="top:' + (f.a * PPM24) + 'px;height:' + ((f.b - f.a) * PPM24) + 'px"><span>' + f.l + '</span></div>'; });
+    for (var i = 0; i < 96; i++) {
+      var mm = i * 15;
+      out += '<button type="button" class="slot' + (mm % 60 === 0 ? ' hr' : '') + (mm % 30 !== 0 ? ' q' : '') + '" data-sadd="E' + (i * 3) + '" aria-label="' + hm(mm) + 'に予定を追加"><span class="lab">' + (mm % 30 === 0 ? hm(mm) : '') + '</span></button>';
+    }
+    out += '<div class="blocks">' + ts.map(function (t) {
+      return '<button type="button" class="task ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (t.mins >= 60 ? ' tall' : '') + ' edit' + (selId && selId === t.id ? ' sel' : '') + '" id="tb-' + esc(t.id) + '" data-edit="' + esc(t.id) + '" style="top:' + (t.start * PPM24) + 'px;height:' + Math.max(14, t.mins * PPM24 - 2) + 'px" aria-label="' + esc(t.subj + ' ' + t.label + ' ' + hm(t.start) + 'から' + t.mins + '分を変更') + '"><div class="tx"><div class="l1"><span class="subj">' + esc(t.subj) + '</span><span class="lb">' + esc(t.label) + '</span><span class="mins">' + t.mins + '分</span></div>' + (t.mins >= 30 ? '<div class="l2">' + hm(t.start) + '〜' + hm(t.end) + '</div>' : '') + '</div></button>';
+    }).join('') + '</div></div></div>';
+    return out;
+  }
+  function goMin(min, id) {
+    var el = (id && document.getElementById('tb-' + id)) || document.querySelector('.tl24 .slot[data-sadd="E' + (Math.floor(min / 15) * 3) + '"]');
+    try { if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); } catch (x) {}
+  }
+  function fmark(m) { return '<div class="fm ' + m.k + '"><span>' + m.l + '</span><span>' + m.r + '</span></div>'; }
+  /* コマと休憩は時刻で区切る。予定は、はじまりの時刻が入るコマの中に並べる(5分の休憩にはじまる予定は、次のコマ)。 */
+  var FSEG = [{ l: 'Aコマ', a: 1020, b: 1110 }, { l: 'Bコマ', a: 1115, b: 1205 }, { l: 'Cコマ', a: 1210, b: 1300 }];
+  function segOf(m) { return m < 1020 ? -1 : m < 1110 ? 0 : m < 1205 ? 1 : m < 1300 ? 2 : 3; }
+  function brk(a, b) { return fmark({ k: 'b', l: '休憩', r: hm(a) + '〜' + hm(b) + '(' + (b - a) + '分)' }); }
+  function withMarks(ts, fn, day) {
+    if (day === 0 || day === 3 || !ts.length) return ts.map(function (t) { return fn(t); }).join('');
+    var g = [[], [], [], [], []]; /* 0:Aより前 1:A 2:B 3:C 4:Cのあと */
+    ts.forEach(function (t) { g[segOf(t.start) + 1].push(t); });
+    function grp(list, lim) { return list.map(function (t) { return fn(t, lim && t.end > lim ? hm(lim) + 'をこえる' : ''); }).join(''); }
+    var out = '';
+    if (g[0].length) out += '<div class="kg">' + fmark({ k: 'k', l: 'Aコマの前', r: hm(1020) + 'より前' }) + grp(g[0]) + '</div>';
+    FSEG.forEach(function (f, i) {
+      if (i) out += brk(FSEG[i - 1].b, f.a);
+      out += '<div class="kg">' + fmark({ k: 'k', l: f.l, r: hm(f.a) + '〜' + hm(f.b) }) + (g[i + 1].length ? grp(g[i + 1], f.b) : '<div class="fe">予定なし</div>') + '</div>';
+    });
+    if (g[4].length) out += '<div class="kg">' + fmark({ k: 'k', l: 'Cコマのあと', r: hm(1300) + 'から' }) + grp(g[4]) + '</div>';
+    return out;
+  }
+  function U(k) { return (KOMA[k] && KOMA[k].unit) || 15; }
+  var DURS_E = [{ n: 1, m: 5 }, { n: 2, m: 10 }, { n: 3, m: 15 }, { n: 6, m: 30 }, { n: 9, m: 45 }, { n: 12, m: 60 }, { n: 18, m: 90 }, { n: 24, m: 120 }, { n: 30, m: 150 }, { n: 36, m: 180 }, { n: 48, m: 240 }];
+  function durList(k) { return k === 'E' ? DURS_E : (k === 'D' ? DURS24 : DURS); }
+  function kstChips(e) { return e.koma === 'E' && e.day !== 0 && e.day !== 3 ? '<fieldset><legend>コマのはじまりに合わせる</legend><div class="chips">' + [['Aコマ', 1020], ['Bコマ', 1115], ['Cコマ', 1210]].map(function (c) { return '<button type="button" class="cbtn" data-kst="' + c[1] + '" aria-pressed="' + (e.s * 5 === c[1]) + '">' + c[0] + ' ' + hm(c[1]) + '</button>'; }).join('') + '</div></fieldset>' : ''; }
+  var DURS24 = [{ n: 1, m: 15 }, { n: 2, m: 30 }, { n: 3, m: 45 }, { n: 4, m: 60 }, { n: 6, m: 90 }, { n: 8, m: 120 }, { n: 10, m: 150 }, { n: 12, m: 180 }, { n: 16, m: 240 }];
+  var DURS = [{ n: 1, m: 15 }, { n: 2, m: 30 }, { n: 3, m: 45 }, { n: 4, m: 60 }, { n: 6, m: 90 }];
+  var PPM = 3.4;
+  function rng(n) { var a = []; for (var i = 0; i < n; i++) a.push(i); return a; }
+  function edForm() {
+    var e = S.ed, ks = KOMA[e.koma].start;
+    var out = '<section class="panel" id="edform" aria-labelledby="fh"><h2 id="fh">' + (e.id ? '予定を変更' : '予定を追加') + '(' + WD[e.day] + '曜日)</h2><div class="grid2">' + (is24() ? '' : '<div class="field"><label for="ed-koma">' + (e.koma === 'F' ? '時間帯' : 'コマ') + '</label><select id="ed-koma">' + komasOf(e.day).map(function (k) { return opt(k, kname(k, e.day) + '(' + hm(KOMA[k].start) + '〜' + hm(KOMA[k].start + KOMA[k].slots * 15) + ')', k === e.koma); }).join('') + '</select></div>') + '<div class="field"><label for="ed-s">' + (is24() ? 'はじまりの時刻' : 'はじまり') + '</label><select id="ed-s">' + rng(KOMA[e.koma].slots).map(function (i) { return opt(i, hm(ks + i * U(e.koma)), i === e.s); }).join('') + '</select></div></div>';
+    out += kstChips(e);
+    out += '<fieldset><legend>長さ</legend><div class="chips">' + durList(e.koma).map(function (d) { return '<button type="button" class="cbtn" data-dur="' + d.n + '" aria-pressed="' + (e.n === d.n) + '"' + (e.s + d.n > KOMA[e.koma].slots ? ' disabled' : '') + '>' + d.m + '分</button>'; }).join('') + '</div><span class="hint">終わりは ' + hm(ks + (e.s + e.n) * U(e.koma)) + ' です。</span></fieldset>';
+    out += '<fieldset><legend>教科</legend><div class="chips">' + SUBJ_LIST.map(function (x) { return '<button type="button" class="cbtn s ' + SUBJ[x] + '" data-subj="' + x + '" aria-pressed="' + (e.subj === x) + '">' + x + '</button>'; }).join('') + '</div></fieldset>';
+    out += '<div class="field"><label for="ed-label">内容</label><input type="text" id="ed-label" maxlength="20" autocomplete="off" value="' + esc(e.label) + '"><div class="chips">' + CHIPS.map(function (c) { return '<button type="button" class="cbtn" data-chip="' + esc(c) + '" aria-pressed="' + (e.label === c) + '">' + c + '</button>'; }).join('') + '</div></div>';
+    if (S.edErr) out += '<p class="msg err" role="alert">' + esc(S.edErr) + '</p>'; else if (S.edInfo) out += '<p class="msg ok" role="status">' + esc(S.edInfo) + '</p>';
+    if (S.rep.open) {
+      out += '<fieldset class="repbox"><legend>くり返す先をえらびます</legend><p class="hint">曜日:同じコマ・同じ時間に作ります</p><div class="chips" role="group" aria-label="くり返す曜日">' + ORDER.filter(function (d) { return d !== e.day; }).map(function (d) { return '<button type="button" class="cbtn" data-repday="' + d + '" aria-pressed="' + !!S.rep.days[d] + '">' + WD[d] + '</button>'; }).join('') + '</div>';
+      if (is24() ? (e.koma === 'E' && frameDay(e.day)) : !isF(e.day)) out += '<p class="hint">' + (is24() ? '同じ曜日のコマのはじまり(A 17:00 / B 18:35 / C 20:10)に、同じ長さで作ります' : '同じ曜日のほかのコマ:同じ位置に作ります') + '</p><div class="chips" role="group" aria-label="くり返すコマ">' + KOMAS.filter(function (c) { return is24() ? KSTART[c] !== e.s * 5 : c !== e.koma; }).map(function (c) { return '<button type="button" class="cbtn" data-repkoma="' + c + '" aria-pressed="' + !!(S.rep.komas && S.rep.komas[c]) + '">' + KOMA[c].name + '</button>'; }).join('') + '</div>';
+      out += '<div class="actions"><button type="button" class="btn pri" data-repsave>選んだところにも保存</button></div></fieldset>';
+    }
+    out += '<div class="actions"><button type="button" class="btn pri" data-edsave>保存</button>' + (e.id ? '<button type="button" class="btn" data-edcopy>コピー</button>' : '') + '<button type="button" class="btn" data-edrep aria-pressed="' + S.rep.open + '">くり返す</button>' + (e.id ? '<button type="button" class="btn dng' + (S.delArm ? ' arm' : '') + '" data-eddel>' + (S.delArm ? 'もう一度おすと削除' : '削除') + '</button>' : '') + '<button type="button" class="btn" data-edcancel>とじる</button></div></section>';
+    return out;
+  }
+  function eblock(t) {
+    var top = (t.start - KOMA[t.koma].start) * PPM, h = t.mins * PPM - 3;
+    var cls = 'task ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (t.mins >= 60 ? ' tall' : '') + ' edit' + (S.ed && S.ed.id === t.id ? ' sel' : '');
+    return '<button type="button" class="' + cls + '" data-edit="' + esc(t.id) + '" style="top:' + top + 'px;height:' + h + 'px" aria-label="' + esc(t.subj + ' ' + t.label + ' ' + hm(t.start) + 'から' + t.mins + '分を変更') + '"><div class="tx"><div class="l1"><span class="subj">' + esc(t.subj) + '</span><span class="lb">' + esc(t.label) + '</span><span class="mins">' + t.mins + '分</span></div>' + (t.mins >= 30 ? '<div class="l2">' + hm(t.start) + '〜' + hm(t.end) + '</div>' : '') + '</div></button>';
+  }
+  function elist24(day) {
+    var ts = tasksOf(tasks, day);
+    return '<div class="dl24" id="kz-D">' + (ts.length ? '' : '<p class="empty">この日の予定はありません。下の「予定を追加」から入れます。</p>') + withMarks(ts, function (t) {
+      return '<button type="button" class="tk ' + SUBJ[t.subj] + (t.lesson ? ' lesson' : '') + (S.ed && S.ed.id === t.id ? ' sel' : '') + '" data-edit="' + esc(t.id) + '" aria-label="' + esc(t.subj + ' ' + t.label + ' ' + hm(t.start) + 'から' + t.mins + '分を変更') + '"><div class="tm">' + hm(t.start) + '<br>〜' + hm(t.end) + '</div><div class="tx"><div class="l1"><span class="subj">' + esc(t.subj) + '</span><span class="lb">' + esc(t.label) + '</span><span class="mins">' + t.mins + '分</span></div></div></button>';
+    }) + '</div>';
+  }
+  function etimeline(day) {
+    var el = editList();
+    if (is24()) return tl24(el, day, S.ed && S.ed.id);
+    var out = '<div class="komas">';
+    komasOf(day).forEach(function (k) {
+      var ks = KOMA[k].start, ns = KOMA[k].slots, len = ns * 15, g = el.filter(function (t) { return t.day === day && t.koma === k; });
+      out += '<div class="koma" id="kz-' + k + '"><h3>' + kname(k, day) + '<span>' + hm(ks) + '〜' + hm(ks + len) + '</span></h3><div class="tl" style="--slot:' + (15 * PPM) + 'px;--rows:' + ns + ';height:' + (len * PPM) + 'px">';
+      for (var i = 0; i < ns; i++) {
+        var mm = ks + i * 15, long = k === 'F', lab = (!long || mm % 30 === 0) ? hm(mm) : '';
+        var cl = 'slot' + (long && mm % 60 === 0 ? ' hr' : '') + (long && mm % 30 !== 0 ? ' q' : '');
+        out += '<button type="button" class="' + cl + '" data-sadd="' + k + i + '" aria-label="' + hm(mm) + 'に予定を追加"><span class="lab">' + lab + '</span></button>';
+      }
+      out += '<div class="blocks">' + g.map(eblock).join('') + '</div></div></div>';
+    });
+    return out + '</div>';
+  }
+  function edayTabs() {
+    return '<nav class="days" aria-label="曜日">' + ORDER.map(function (d) {
+      var n = tasksOf(editList(), d).length, dt = addDays(parseYmd(S.ekey), (d + 6) % 7);
+      return '<button type="button" class="day" data-eday="' + d + '" aria-pressed="' + (d === S.eday) + '"><span class="dw">' + WD[d] + '</span><span class="dn">' + dt.getDate() + '</span><span class="df">' + n + '件</span></button>';
+    }).join('') + '</nav>';
+  }
+  function verLabel() { if (!sched.v) return '—'; var d = new Date(sched.v); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' の版'; }
+  function editPanel() {
+    var wm = emodeNow() === 'week';
+    var out = '<section class="panel"><h2>時間割の変更</h2><p class="hint">時間わくを押すと予定を追加、予定を押すと変更できます。' + (wm ? 'この週だけの変更で、ほかの週は変わりません。' : '変えた時間割は、次の予定からずっと使われます。') + '今までの記録は、そのまま残ります。</p>' + weekSel() + '<div class="chips" role="group" aria-label="表示"><button type="button" class="cbtn" data-eview="day" aria-pressed="' + (S.eview !== 'week') + '">1日ずつ</button><button type="button" class="cbtn" data-eview="week" aria-pressed="' + (S.eview === 'week') + '">週間表</button></div>' + (S.eview === 'week' ? '' : edayTabs()) + '</section>';
+    out += S.eview === 'week' ? embedWeek() : etimeline(S.eday);
+    if (S.ed) out += edForm();
+    else out += (S.eview === 'week' ? '' : '<div class="actions"><button type="button" class="btn pri" data-add="' + S.eday + '">予定を追加</button></div>') + (S.pageMsg ? '<p class="msg ok" role="status">' + esc(S.pageMsg) + '</p>' : '');
+    var mb = myBase(), mbl = '';
+    if (mb) { var md = new Date(mb.at); mbl = '登録ずみ(' + (md.getMonth() + 1) + '/' + md.getDate() + ' ' + pad(md.getHours()) + ':' + pad(md.getMinutes()) + ')'; } else mbl = '未登録(先生が最初に作った時間割がもどり先です)';
+    out += '<section class="panel" aria-labelledby="rs"><h2 id="rs">基本の時間割</h2><p class="hint">' + (wm ? 'この週の時間割' : 'いまの時間割') + 'を「基本」として登録しておくと、あとで「リセット」でその時間割にもどせます。' + (wm ? 'リセットすると、この週の時間割が基本の時間割になります。' : '') + '今までの記録は消えません。</p><p class="hint">基本の時間割:' + esc(mbl) + '</p><div class="actions">' +
+      '<button type="button" class="btn pri" data-basesave>' + (wm ? 'この週の時間割を基本として登録' : 'いまの時間割を基本として登録') + '</button>' + (wm ? '<button type="button" class="btn" data-wtobase>この週の時間割を、これから毎週の時間割にする</button>' : '') +
+      (S.resetAsk ? '<button type="button" class="btn dng arm" data-resetok>本当にリセット</button><button type="button" class="btn" data-resetno>やめる</button>' : '<button type="button" class="btn" data-reset>リセット(基本の時間割にもどす)</button>') + '</div>' +
+      (S.baseMsg ? '<p class="msg ' + S.baseMsg.kind + '" role="status">' + esc(S.baseMsg.text) + '</p>' : '') + '</section>';
+    out += '<section class="panel" aria-labelledby="ca"><h2 id="ca">すべての予定を削除</h2><p class="hint">時間割の予定を、すべて消します。今までの記録は消えません。もとにもどすときは、上の「基本の時間割」の「リセット」を使います。</p><div class="actions">' + (S.clearAsk ? '<button type="button" class="btn dng arm" data-clearok>本当にすべて削除</button><button type="button" class="btn" data-clearno>やめる</button>' : '<button type="button" class="btn dng" data-clear>すべての予定を削除</button>') + '</div></section>';
+    out += '<section class="panel" aria-labelledby="sc"><h2 id="sc">先生から時間割コードが来たら</h2><p class="hint">いまの時間割:' + verLabel() + '。先生から届いたメッセージ(SIE-S1:で始まるコード)を、下に貼り付けます。自分で変えた時間割より新しいものだけが使われます。</p>' +
+      '<div class="field"><label for="sin">貼り付け</label><textarea id="sin" class="code" placeholder="SIE-S1:…" style="min-height:96px"></textarea></div><div class="actions"><button type="button" class="btn" data-sched>時間割を更新</button></div>' +
+      (S.msgSched ? '<p class="msg ' + S.msgSched.kind + '" role="status">' + esc(S.msgSched.text) + '</p>' : '') + '</section>';
+    return out;
+  }
+
+  /* ---- 画面 ---- */
+  var TABS = [['today', '今日'], ['week', '週間'], ['rec', '記録'], ['edit', '変更']];
+  function render() {
+    var a = document.activeElement, fid = a && a.id, ss = null, se = null;
+    try { ss = a.selectionStart; se = a.selectionEnd; } catch (x) {}
+    var html = (S.banner ? '<p class="msg ' + S.banner.kind + '" role="status">' + esc(S.banner.text) + '</p>' : '') + (canStore ? '' : '<p class="msg err" role="alert">この開き方では、チェックが保存されません。ブラウザ(ChromeやSafari)で開き直してください。</p>') +
+      '<nav class="tabs noprint" aria-label="画面">' + TABS.map(function (t) { return '<button type="button" class="tab" data-tab="' + t[0] + '"' + (S.tab === t[0] ? ' aria-current="page"' : '') + '>' + t[1] + '</button>'; }).join('') + '</nav>';
+    if (S.tab === 'today') {
+      var st = stats(tasks, done), y = st.day[S.sel] || { n: 0, c: 0 }, dt = addDays(parseYmd(S.key), (S.sel + 6) % 7);
+      html += '<header class="head"><div><p class="eyebrow">' + (dt.getMonth() + 1) + '月' + dt.getDate() + '日(' + WD[S.sel] + ')</p><h1>' + (S.sel === todayNum() ? '今日の勉強' : WD[S.sel] + '曜日の勉強') + '</h1></div>' + ring(y.c, y.n) + '</header>' +
+        dayTabs() + '<section id="hero" aria-live="polite">' + hero() + '</section>' + (is24() ? dlist(S.sel) : timeline(S.sel)) +
+        '<section class="panel" aria-labelledby="wk"><h2 id="wk">今週の進み(' + rangeLabel(S.key) + ')</h2><div class="subs">' + (subjBars(st) || '<p class="hint">この週の予定はありません。</p>') + '</div></section>';
+    } else if (S.tab === 'week') {
+      html += weekPanel();
+    } else if (S.tab === 'rec') {
+      html += '<header class="head"><div><p class="eyebrow">毎週月曜0:00に切りかわります</p><h1>きろく</h1></div></header>' + recordPanel();
+    } else {
+      html += '<header class="head"><div><p class="eyebrow">自分で変えられます</p><h1>時間割の変更</h1></div></header>' + editPanel();
+    }
+    var pg = document.getElementById('pgstyle'); if (!pg) { pg = document.createElement('style'); pg.id = 'pgstyle'; document.head.appendChild(pg); }
+    pg.textContent = S.tab === 'week' ? '@media print{@page{size:A4 landscape;margin:8mm}}' : '';
+    var sy = window.scrollY, sin = document.getElementById('sin'), sv = sin ? sin.value : '';
+    app.className = 'app' + (S.tab === 'week' || (S.tab === 'edit' && S.eview === 'week') ? ' wide' : '');
+    app.innerHTML = html;
+    var sin2 = document.getElementById('sin'); if (sin2 && sv) sin2.value = sv;
+    if (fid && fid !== 'rep') { var el = document.getElementById(fid); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, se); } catch (x2) {} } }
+    window.scrollTo(0, sy);
+    updateNow();
+  }
+
+  function updateNow() {
+    var n = nowMin(), tls = document.querySelectorAll('.tl[data-ks]');
+    for (var i = 0; i < tls.length; i++) {
+      var tl = tls[i], line = tl.querySelector('.nowline'); if (!line) continue;
+      var ks = +tl.getAttribute('data-ks'), len = +tl.getAttribute('data-len') || 90;
+      if (S.sel === todayNum() && n >= ks && n <= ks + len) { line.hidden = false; line.style.top = ((n - ks) * PPM) + 'px'; } else line.hidden = true;
+    }
+  }
+
+  function copyFrom(btn) {
+    var el = document.getElementById(btn.getAttribute('data-copy')); if (!el) return;
+    var orig = btn.textContent;
+    function ok() { btn.textContent = 'コピーしました'; setTimeout(function () { btn.textContent = orig; }, 2000); }
+    function ng() { el.focus(); el.select(); btn.textContent = '文章を選びました。コピーしてください'; setTimeout(function () { btn.textContent = orig; }, 3500); }
+    try { navigator.clipboard.writeText(el.value).then(ok, ng); } catch (e) { ng(); }
+  }
+
+  function updateSched() {
+    var el = document.getElementById('sin'), txt = el ? el.value : '', i = txt.indexOf('SIE-S1:');
+    function say(kind, text) { S.msgSched = { kind: kind, text: text }; render(); }
+    if (i < 0) return say('err', 'コード(SIE-S1:で始まる部分)が見つかりません。メッセージをまるごと貼り付けてください。');
+    var m = txt.slice(i + 7).replace(/\s+/g, '').match(/^[A-Za-z0-9+\/]+={0,2}/), o;
+    if (!m) return say('err', 'コードを読み取れませんでした。');
+    try { o = JSON.parse(b64d(m[0])); } catch (e) { return say('err', 'コードを読み取れませんでした。もう一度、まるごと貼り付けてください。'); }
+    var t = validSched(o);
+    if (!t) return say('err', 'コードの内容が正しくありません。先生に送りなおしてもらってください。');
+    if (checkIdent(o)) return;
+    if (typeof o.n === 'string' && o.n) { S.name = o.n.slice(0, 20); lsSet('name', S.name); lsSet('linkname', o.n); }
+    if (typeof o.w === 'string') { var wr = applyWeekCode(o, t); S.msgSched = wr; render(); var wi = document.getElementById('sin'); if (wi && wr.kind === 'ok') wi.value = ''; return; }
+    var pchg = typeof o.p === 'string' && o.p !== PATTERN && PATTERNS[o.p];
+    var stale = o.v <= tvGet() && !pchg, chg = false;
+    if (!stale) { if (typeof o.p === 'string') setPattern(o.p); applySched(t, o.v); lsSet('tv', String(o.v)); chg = true; }
+    var nw = applyWs(o);
+    if (!chg && !nw) return say('ok', 'すでに、この時間割(または、もっと新しい先生の時間割)を読み込みずみです。');
+    S.msgSched = { kind: 'ok', text: (chg ? '新しい時間割に更新しました。' : '') + (nw ? '今後の週の時間割 ' + nw + '週分を読み込みました。' : '') };
+    render();
+    var inp = document.getElementById('sin'); if (inp) inp.value = '';
+  }
+
+  function openEd(task, day, koma, slot) {
+    S.edErr = ''; S.edInfo = ''; S.pageMsg = ''; S.delArm = false; S.delId = null; S.rep = { open: false, days: {}, komas: {} };
+    if (task) S.eday = task.day; else if (day != null) S.eday = day;
+    if (task) S.ed = { id: task.id, day: task.day, koma: task.koma, s: task.s, n: task.n, subj: task.subj, label: task.label };
+    else { var kk = koma || (is24() ? 'E' : (isF(day) ? 'F' : 'A')), ss = slot || 0, isK = !!KSTART[kk];
+      if (kk === 'E' && slot >= 0) ss = Math.min(slot, 282);
+      if (kk === 'E' && !(slot >= 0)) { var le = 0; tasksOf(editList(), day).forEach(function (t) { if (t.end > le) le = t.end; }); ss = le ? Math.min(282, Math.ceil(le / 5)) : 204; } S.ed = { id: null, day: day, koma: kk, s: ss, n: isK ? Math.min(6, KOMA[kk].slots - ss) : (kk === 'E' ? Math.min(6, 288 - ss) : Math.min(2, KOMA[kk].slots - ss)), subj: '算数', label: isK ? '授業' : '宿題' }; }
+    render();
+    toForm();
+  }
+  function toForm() {
+    var f = document.getElementById('edform'); if (!f) return;
+    try {
+      if (f.scrollIntoView) f.scrollIntoView({ block: 'start' });
+      var sb = f.querySelector('[data-edsave]');
+      if (sb) { var r = sb.getBoundingClientRect(); if (r.bottom > (window.innerHeight || 600)) { sb.scrollIntoView({ block: 'end' }); window.scrollBy(0, 16); } sb.focus({ preventScroll: true }); }
+    } catch (x) {}
+  }
+  function jumpTo(day, koma, id, minArg) {
+    var el = null;
+    if (is24() && S.tab === 'edit') { goMin(minArg == null ? 0 : minArg, id); return; }
+    if (is24()) el = document.getElementById(S.tab === 'week' ? 'wc-' + day : 'kz-D');
+    else if (S.tab === 'week') el = isF(day) ? document.getElementById(day === 0 ? 'gsun' : 'gsun-' + day) : document.getElementById('gk-' + koma);
+    else el = document.getElementById('kz-' + (isF(day) ? 'F' : koma));
+    try { if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); } catch (x) {}
+  }
+  function slotFor(day, start, mins) {
+    if (is24()) return start >= 0 && start % 5 === 0 && start + mins <= 1440 ? { koma: 'E', s: start / 5 } : null;
+    if (isF(day)) { var s0 = Math.round((start - KOMA.F.start) / 15); return start >= KOMA.F.start && s0 * 15 + mins <= 52 * 15 ? { koma: 'F', s: s0 } : null; }
+    for (var i = 0; i < KOMAS.length; i++) { var k = KOMAS[i], ks = KOMA[k].start; if (start >= ks && start + mins <= ks + 90 && (start - ks) % 15 === 0) return { koma: k, s: (start - ks) / 15 }; }
+    return null;
+  }
+  function clashes(list, c) { return normList(list).some(function (t) { return t.id !== c.id && t.day === c.day && t.koma === c.koma && c.s < t.s + t.n && t.s < c.s + c.n; }); }
+  function saveEd(repDays, repKomas) {
+    var e = S.ed, k = KOMA[e.koma], label = String(e.label || '').trim();
+    if (!label) { S.edErr = '内容を入れてください。'; return render(); }
+    if (e.s + e.n > k.slots) { S.edErr = (e.koma === 'F' ? WD[e.day] + '曜日は22:00までです。' : k.name + 'の時間をこえています。') + '開始か長さを変えてください。'; return render(); }
+    var item = { id: e.id || newId(), day: e.day, koma: e.koma, s: e.s, n: e.n, subj: e.subj, label: label };
+    var cur0 = editList();
+    if (clashes(cur0, item)) { S.edErr = 'ほかの予定と時間が重なっています。'; return render(); }
+    var list = cur0.filter(function (t) { return t.id !== item.id; }); list.push(item);
+    var st = k.start + e.s * U(e.koma), made = [], skipped = [];
+    (repDays || []).forEach(function (d) {
+      var sl = slotFor(d, st, e.n * U(e.koma)); if (!sl) { skipped.push(WD[d]); return; }
+      var cand = { id: newId(), day: d, koma: sl.koma, s: sl.s, n: e.n, subj: e.subj, label: label };
+      if (clashes(list, cand)) { skipped.push(WD[d]); return; }
+      list.push(cand); made.push(WD[d]);
+    });
+    (repKomas || []).forEach(function (c) {
+      var cand = is24() ? { id: newId(), day: e.day, koma: 'E', s: KSTART[c] / 5, n: e.n, subj: e.subj, label: label } : { id: newId(), day: e.day, koma: c, s: e.s, n: e.n, subj: e.subj, label: label };
+      if (cand.s + cand.n > KOMA[cand.koma].slots || clashes(list, cand)) { skipped.push(KOMA[c].name); return; }
+      list.push(cand); made.push(KOMA[c].name);
+    });
+    putEdit(list);
+    S.ed = null; S.edErr = ''; S.edInfo = ''; S.delArm = false; S.rep = { open: false, days: {}, komas: {} }; S.eday = item.day;
+    S.pageMsg = '保存しました。';
+    S.banner = { kind: 'ok', text: '保存しました。' + (made.length ? '「' + made.join('・') + '」にも作りました。' : '') + (skipped.length ? '「' + skipped.join('・') + '」は、時間が重なる、または入らないため作れませんでした。' : '') };
+    render();
+    jumpTo(item.day, item.koma, item.id, item.s * U(item.koma) + KOMA[item.koma].start);
+  }
+  function copyEd() {
+    var e = S.ed; if (!e || !e.id) return;
+    var c = { id: null, day: e.day, koma: e.koma, s: e.s, n: e.n, subj: e.subj, label: e.label };
+    var ns = e.s + e.n;
+    if (ns + e.n <= KOMA[e.koma].slots && !clashes(editList(), { id: null, day: e.day, koma: e.koma, s: ns, n: e.n })) c.s = ns;
+    S.ed = c; S.edErr = ''; S.edInfo = 'コピーしました。曜日や時間を変えて、保存してください。'; S.rep = { open: false, days: {}, komas: {} };
+    render();
+    toForm();
+  }
+
+  app.addEventListener('click', function (ev) {
+    var t = ev.target, b;
+    if ((b = t.closest('[data-toggle]'))) {
+      var id = b.getAttribute('data-toggle');
+      if (done[id]) delete done[id]; else done[id] = Date.now();
+      saveDone(); render();
+      var nb = document.querySelector('.chk[data-toggle="' + id + '"]'); if (nb) nb.focus();
+      return;
+    }
+    if ((b = t.closest('[data-tab]'))) { S.banner = null; S.pageMsg = ''; S.clearAsk = false; S.tab = b.getAttribute('data-tab'); render(); window.scrollTo(0, 0); return; }
+    if ((b = t.closest('[data-day]'))) { S.sel = +b.getAttribute('data-day'); render(); return; }
+    if ((b = t.closest('[data-copy]'))) { copyFrom(b); return; }
+    if (t.closest('[data-print]')) { try { window.print(); } catch (x) {} return; }
+    if (t.closest('[data-blank]')) { S.blank = !S.blank; render(); return; }
+    if (t.closest('[data-sched]')) { updateSched(); return; }
+    if ((b = t.closest('[data-add]'))) { openEd(null, +b.getAttribute('data-add')); return; }
+    if ((b = t.closest('[data-edit]'))) { var tk = editList().filter(function (x) { return x.id === b.getAttribute('data-edit'); })[0]; if (tk) openEd(tk); return; }
+    if ((b = t.closest('[data-delok]'))) { var did = b.getAttribute('data-delok'); var dl0 = editList(), dt0 = dl0.filter(function (x) { return x.id === did; })[0]; putEdit(dl0.filter(function (x) { return x.id !== did; })); S.delId = null; if (S.ed && S.ed.id === did) S.ed = null; render(); if (dt0) jumpTo(dt0.day, dt0.koma, null); return; }
+    if ((b = t.closest('[data-del]'))) { S.delId = b.getAttribute('data-del'); render(); return; }
+    if (t.closest('[data-delno]')) { S.delId = null; render(); return; }
+    if ((b = t.closest('[data-wk]'))) { S.wk = b.getAttribute('data-wk') || ''; S.ed = null; S.edErr = ''; S.edInfo = ''; S.delId = null; S.rep = { open: false, days: {}, komas: {} }; render(); return; }
+    if ((b = t.closest('[data-eview]'))) { S.eview = b.getAttribute('data-eview'); S.ed = null; S.edErr = ''; S.edInfo = ''; S.delId = null; S.rep = { open: false, days: {}, komas: {} }; render(); return; }
+    if (t.closest('[data-wtobase]')) { applySched(editList()); S.baseMsg = { kind: 'ok', text: 'この週の時間割を、これから毎週の時間割にしました。' }; render(); return; }
+    if ((b = t.closest('[data-ewk]'))) { S.ekey = b.getAttribute('data-ewk'); S.ed = null; S.edErr = ''; S.edInfo = ''; S.pageMsg = ''; S.delArm = false; S.wrAsk = false; S.clearAsk = false; S.rep = { open: false, days: {}, komas: {} }; render(); return; }
+    if ((b = t.closest('[data-emode]'))) { S.emode = b.getAttribute('data-emode'); S.ed = null; S.edErr = ''; S.edInfo = ''; S.pageMsg = ''; S.delArm = false; S.wrAsk = false; S.clearAsk = false; S.rep = { open: false, days: {}, komas: {} }; render(); return; }
+    if (t.closest('[data-wreset]')) {
+      if (!S.wrAsk) { S.wrAsk = true; render(); return; }
+      var wk = ekeyNow(); lsDel('wo:' + wk); lsDel('wv:' + wk);
+      if (wk === S.key) { tasks = normList(sched.tasks); snapSave(S.key, tasks); } else lsDel('wt:' + wk);
+      S.wrAsk = false; S.ed = null; S.pageMsg = 'この週の変更をやめて、基本の時間割にもどしました。'; render(); return;
+    }
+    if ((b = t.closest('[data-eday]'))) { S.eday = +b.getAttribute('data-eday'); S.ed = null; S.edErr = ''; S.edInfo = ''; S.pageMsg = ''; S.delArm = false; render(); return; }
+    if ((b = t.closest('[data-sadd]'))) { var sv = b.getAttribute('data-sadd'); openEd(null, S.eday, sv.charAt(0), +sv.slice(1)); return; }
+    if ((b = t.closest('[data-jt]'))) { goMin(+b.getAttribute('data-jt'), null); return; }
+    if ((b = t.closest('[data-kst]'))) { if (S.ed) { S.ed.s = Math.round(+b.getAttribute('data-kst') / 5); if (!S.ed.id) { S.ed.n = 18; S.ed.label = '授業'; } if (S.ed.s + S.ed.n > KOMA[S.ed.koma].slots) S.ed.n = KOMA[S.ed.koma].slots - S.ed.s; S.edErr = ''; render(); } return; }
+    if ((b = t.closest('[data-dur]'))) { if (S.ed) { S.ed.n = +b.getAttribute('data-dur'); S.edErr = ''; render(); } return; }
+    if ((b = t.closest('[data-subj]'))) { if (S.ed) { S.ed.subj = b.getAttribute('data-subj'); render(); } return; }
+    if (t.closest('[data-eddel]')) { if (!S.ed || !S.ed.id) return; if (!S.delArm) { S.delArm = true; render(); return; } var dd = S.ed; putEdit(editList().filter(function (x) { return x.id !== dd.id; })); S.ed = null; S.delArm = false; S.pageMsg = '削除しました。'; render(); jumpTo(dd.day, dd.koma, null, KOMA[dd.koma].start + dd.s * U(dd.koma)); return; }
+    if (t.closest('[data-clear]')) { S.clearAsk = true; render(); return; }
+    if (t.closest('[data-clearno]')) { S.clearAsk = false; render(); return; }
+    if (t.closest('[data-clearok]')) { putEdit([]); S.clearAsk = false; S.ed = null; S.pageMsg = 'すべての予定を削除しました。'; render(); return; }
+    if (t.closest('[data-edsave]')) { saveEd(); return; }
+    if (t.closest('[data-edcopy]')) { copyEd(); return; }
+    if (t.closest('[data-edrep]')) { S.rep.open = !S.rep.open; render(); return; }
+    if ((b = t.closest('[data-repday]'))) { var rd = b.getAttribute('data-repday'); S.rep.days[rd] = !S.rep.days[rd]; render(); return; }
+    if ((b = t.closest('[data-repkoma]'))) { var rk = b.getAttribute('data-repkoma'); S.rep.komas = S.rep.komas || {}; S.rep.komas[rk] = !S.rep.komas[rk]; render(); return; }
+    if (t.closest('[data-repsave]')) { var ds = Object.keys(S.rep.days).filter(function (d) { return S.rep.days[d]; }).map(Number), ks = Object.keys(S.rep.komas || {}).filter(function (c) { return S.rep.komas[c]; }); if (!ds.length && !ks.length) { S.edErr = 'くり返す曜日かコマを選んでください。'; render(); return; } saveEd(ds, ks); return; }
+    if (t.closest('[data-wkedit]')) { S.wkEdit = !S.wkEdit; if (!S.wkEdit) { S.ed = null; S.edErr = ''; } render(); return; }
+    if ((b = t.closest('[data-wedit]'))) { var wt = editList().filter(function (x) { return x.id === b.getAttribute('data-wedit'); })[0]; if (wt) openEd(wt); return; }
+    if ((b = t.closest('[data-wadd]'))) { var pr = b.getAttribute('data-wadd').split(':'); openEd(null, +pr[0], pr[1], +pr[2]); return; }
+    if (t.closest('[data-edcancel]')) { S.ed = null; S.edErr = ''; S.edInfo = ''; S.delArm = false; S.rep = { open: false, days: {}, komas: {} }; render(); return; }
+    if ((b = t.closest('[data-chip]'))) { if (S.ed) { S.ed.label = b.getAttribute('data-chip'); render(); } return; }
+    if (t.closest('[data-reset]')) { S.resetAsk = true; S.baseMsg = null; render(); return; }
+    if (t.closest('[data-resetno]')) { S.resetAsk = false; render(); return; }
+    if (t.closest('[data-basesave]')) { lsSet('mybase', JSON.stringify({ at: Date.now(), t: editList().map(toArr) })); S.baseMsg = { kind: 'ok', text: 'いまの時間割を、基本として登録しました。' }; S.resetAsk = false; render(); return; }
+    if (t.closest('[data-resetok]')) { var mb2 = myBase(); putEdit(mb2 ? mb2.tasks : base.tasks); S.resetAsk = false; S.ed = null; S.baseMsg = { kind: 'ok', text: (mb2 ? '登録した基本の時間割' : '最初の時間割') + 'にもどしました。' }; render(); return; }
+  });
+  app.addEventListener('change', function (ev) {
+    var id = ev.target.id, v = ev.target.value;
+    if (id === 'hsel') { S.hist = v; render(); return; }
+    if (!S.ed || id.indexOf('ed-') !== 0 || id === 'ed-label') return;
+    var e = S.ed;
+    if (id === 'ed-day') { e.day = +v; if (isF(e.day)) { e.koma = 'F'; e.s = 0; } else if (e.koma === 'F') { e.koma = 'A'; e.s = 0; } }
+    else if (id === 'ed-koma') { e.koma = v; e.s = 0; if (e.n > 6) e.n = 6; if (!e.id && KSTART[v]) { e.n = 6; e.label = '授業'; } }
+    else if (id === 'ed-s') { e.s = +v; if (e.s + e.n > KOMA[e.koma].slots) e.n = KOMA[e.koma].slots - e.s; }
+    S.edErr = ''; render();
+  });
+  app.addEventListener('input', function (ev) {
+    var id = ev.target.id;
+    if (id === 'nm') {
+      S.name = ev.target.value; lsSet('name', S.name);
+      var r = document.getElementById('rep'); if (r) r.value = reportText(S.hist);
+    } else if (id === 'nm2') { S.name = ev.target.value; lsSet('name', S.name); var pn = document.querySelector('.nmprint'); if (pn) pn.textContent = (S.name || '') + '\u00a0'; } else if (id === 'ed-label' && S.ed) S.ed.label = ev.target.value;
+    else if (id === 'ln') { S.lname = ev.target.value; var lk = document.getElementById('lnk'); if (lk) lk.value = linkText(S.lname); }
+  });
+
+  render();
+
+  function tick() {
+    if (rollover()) { render(); return; }
+    var h = document.getElementById('hero'); if (h) h.innerHTML = hero();
+    var rows = document.querySelectorAll('.task[data-id]'), n = nowMin();
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i], s = +r.getAttribute('data-s'), e = +r.getAttribute('data-e');
+      r.classList.toggle('now', S.sel === todayNum() && s <= n && n < e);
+      if (S.sel === todayNum() && e <= n && !r.classList.contains('done') && !r.querySelector('.tag')) {
+        var tg = document.createElement('span'); tg.className = 'tag'; tg.textContent = 'まだ'; r.querySelector('.l1').appendChild(tg);
+      }
+    }
+    updateNow();
+  }
+  setInterval(tick, 20000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+})();
+</script>
+
+</body>
+</html>
